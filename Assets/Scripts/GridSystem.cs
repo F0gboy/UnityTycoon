@@ -22,6 +22,7 @@ public class GridSystem : MonoBehaviour
     public KeyCode ToggleInventoryKey = KeyCode.F;
     public bool PlacementModeActive = false;
     public int SelectedIndex = 0;
+    public bool UseInputToggle = true;
 
     private readonly HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int>();
     private Vector3Int hoveredCell;
@@ -30,7 +31,7 @@ public class GridSystem : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(ToggleInventoryKey))
+        if (UseInputToggle && Input.GetKeyDown(ToggleInventoryKey))
         {
             PlacementModeActive = !PlacementModeActive;
         }
