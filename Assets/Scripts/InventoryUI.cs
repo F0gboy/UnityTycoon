@@ -21,10 +21,9 @@ public class InventoryUI : MonoBehaviour
     public Vector2 HiddenAnchoredPosition = new Vector2(-800f, 0f);
 
     [Header("Grid Layout")]
-    public Vector2 CellSize = new Vector2(80f, 80f);
     public Vector2 Spacing = new Vector2(8f, 8f);
     public Vector4 PaddingLeftTopRightBottom = new Vector4(12f, 12f, 12f, 12f);
-    public int FixedColumns = 5;
+    public int FixedColumns = 2;
 
     [Header("Placement Integration")]
     public GridSystem GridSystem;
@@ -34,7 +33,7 @@ public class InventoryUI : MonoBehaviour
 
     private void Awake()
     {
-        EnsureGridLayout();
+        EnsureNoGridLayout();
         Populate();
         SetVisible(false, instant: true);
     }
@@ -93,7 +92,8 @@ public class InventoryUI : MonoBehaviour
         for (int i = 0; i < Items.Count; i++)
         {
             var item = Items[i];
-            var slot = Instantiate(ItemSlotPrefab, ContentRoot);
+            var slot = Instantiate(ItemSlotPrefab, ContentRoot, false);
+            slot.transform.localScale = Vector3.one;
 
             var image = slot.GetComponentInChildren<Image>();
             if (image != null)
@@ -115,6 +115,8 @@ public class InventoryUI : MonoBehaviour
                 button.onClick.AddListener(() => GridSystem.SelectItem(index));
             }
         }
+
+        LayoutItems();
     }
 
     private System.Collections.IEnumerator SlideTo(Vector2 target)
@@ -134,7 +136,7 @@ public class InventoryUI : MonoBehaviour
         slideRoutine = null;
     }
 
-    private void EnsureGridLayout()
+    private void EnsureNoGridLayout()
     {
         if (ContentRoot == null)
         {
@@ -142,21 +144,63 @@ public class InventoryUI : MonoBehaviour
         }
 
         var grid = ContentRoot.GetComponent<GridLayoutGroup>();
-        if (grid == null)
+        if (grid != null)
         {
-            grid = ContentRoot.gameObject.AddComponent<GridLayoutGroup>();
+            Destroy(grid);
+        }
+    }
+
+    private void LayoutItems()
+    {
+        if (ContentRoot == null || ContentRoot.childCount == 0)
+        {
+            return;
         }
 
-        grid.cellSize = CellSize;
-        grid.spacing = Spacing;
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = Mathf.Max(1, FixedColumns);
-        grid.childAlignment = TextAnchor.UpperLeft;
-        grid.padding = new RectOffset(
-            (int)PaddingLeftTopRightBottom.x,
-            (int)PaddingLeftTopRightBottom.z,
-            (int)PaddingLeftTopRightBottom.y,
-            (int)PaddingLeftTopRightBottom.w);
+        var paddingLeft = PaddingLeftTopRightBottom.x;
+        var paddingTop = PaddingLeftTopRightBottom.y;
+        var paddingRight = PaddingLeftTopRightBottom.z;
+        var paddingBottom = PaddingLeftTopRightBottom.w;
+
+        var availableWidth = Mathf.Max(0f, ContentRoot.rect.width - paddingLeft - paddingRight);
+        var firstRect = ContentRoot.GetChild(0) as RectTransform;
+        if (firstRect == null)
+        {
+            return;
+        }
+
+        var itemSize = firstRect.rect.size;
+        var columns = FixedColumns > 0
+            ? FixedColumns
+            : Mathf.Max(1, Mathf.FloorToInt((availableWidth + Spacing.x) / (itemSize.x + Spacing.x)));
+
+        var verticalSign = ContentRoot.lossyScale.y < 0 ? 1f : -1f;
+
+        for (int i = 0; i < ContentRoot.childCount; i++)
+        {
+            var child = ContentRoot.GetChild(i) as RectTransform;
+            if (child == null)
+            {
+                continue;
+            }
+
+            child.anchorMin = new Vector2(0f, 1f);
+            child.anchorMax = new Vector2(0f, 1f);
+            child.pivot = new Vector2(0f, 1f);
+
+            var col = i % columns;
+            var row = i / columns;
+            var x = paddingLeft + col * (itemSize.x + Spacing.x);
+            var y = paddingTop + row * (itemSize.y + Spacing.y);
+            child.anchoredPosition = new Vector2(x, verticalSign * -y);
+        }
+
+        var rows = Mathf.CeilToInt(ContentRoot.childCount / (float)columns);
+        var totalHeight = paddingTop + paddingBottom + rows * itemSize.y + Mathf.Max(0, rows - 1) * Spacing.y;
+        if (totalHeight > ContentRoot.rect.height)
+        {
+            ContentRoot.sizeDelta = new Vector2(ContentRoot.sizeDelta.x, totalHeight);
+        }
     }
 
     [System.Serializable]
