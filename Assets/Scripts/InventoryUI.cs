@@ -24,6 +24,7 @@ public class InventoryUI : MonoBehaviour
     public Vector2 Spacing = new Vector2(8f, 8f);
     public Vector4 PaddingLeftTopRightBottom = new Vector4(12f, 12f, 12f, 12f);
     public int FixedColumns = 2;
+    public Vector2 ItemStep = new Vector2(10f, 20f);
 
     [Header("Placement Integration")]
     public GridSystem GridSystem;
@@ -162,17 +163,13 @@ public class InventoryUI : MonoBehaviour
         var paddingRight = PaddingLeftTopRightBottom.z;
         var paddingBottom = PaddingLeftTopRightBottom.w;
 
-        var availableWidth = Mathf.Max(0f, ContentRoot.rect.width - paddingLeft - paddingRight);
         var firstRect = ContentRoot.GetChild(0) as RectTransform;
         if (firstRect == null)
         {
             return;
         }
 
-        var itemSize = firstRect.rect.size;
-        var columns = FixedColumns > 0
-            ? FixedColumns
-            : Mathf.Max(1, Mathf.FloorToInt((availableWidth + Spacing.x) / (itemSize.x + Spacing.x)));
+        var columns = Mathf.Max(1, FixedColumns);
 
         var verticalSign = ContentRoot.lossyScale.y < 0 ? 1f : -1f;
 
@@ -190,16 +187,9 @@ public class InventoryUI : MonoBehaviour
 
             var col = i % columns;
             var row = i / columns;
-            var x = paddingLeft + col * (itemSize.x + Spacing.x);
-            var y = paddingTop + row * (itemSize.y + Spacing.y);
+            var x = paddingLeft + col * ItemStep.x;
+            var y = paddingTop + row * ItemStep.y;
             child.anchoredPosition = new Vector2(x, verticalSign * -y);
-        }
-
-        var rows = Mathf.CeilToInt(ContentRoot.childCount / (float)columns);
-        var totalHeight = paddingTop + paddingBottom + rows * itemSize.y + Mathf.Max(0, rows - 1) * Spacing.y;
-        if (totalHeight > ContentRoot.rect.height)
-        {
-            ContentRoot.sizeDelta = new Vector2(ContentRoot.sizeDelta.x, totalHeight);
         }
     }
 
