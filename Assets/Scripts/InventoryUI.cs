@@ -11,9 +11,15 @@ public class InventoryUI : MonoBehaviour
 
     [Header("Inventory Data")]
     public List<InventoryItem> Items = new List<InventoryItem>();
+    public List<InventoryItem> StoreItems = new List<InventoryItem>();
 
     [Header("Input")]
     public KeyCode ToggleKey = KeyCode.F;
+    public bool KeepCursorUnlockedWhileVisible = true;
+
+    [Header("Tabs")]
+    public Button InventoryTabButton;
+    public Button StoreTabButton;
 
     [Header("Slide Settings")]
     public float SlideDuration = 0.25f;
@@ -26,15 +32,22 @@ public class InventoryUI : MonoBehaviour
     public int FixedColumns = 2;
     public Vector2 ItemStep = new Vector2(10f, 20f);
 
+    [Header("Scrolling")]
+    public ScrollRect ScrollRect;
+    public RectTransform Viewport;
+
     [Header("Placement Integration")]
     public GridSystem GridSystem;
 
     private bool isVisible;
     private Coroutine slideRoutine;
+    private bool showingStore;
 
     private void Awake()
     {
         EnsureNoGridLayout();
+        EnsureScrollRect();
+        HookTabButtons();
         Populate();
         SetVisible(false, instant: true);
     }
@@ -44,6 +57,15 @@ public class InventoryUI : MonoBehaviour
         if (Input.GetKeyDown(ToggleKey))
         {
             Toggle();
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (isVisible && KeepCursorUnlockedWhileVisible)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
     }
 
@@ -76,6 +98,9 @@ public class InventoryUI : MonoBehaviour
         {
             GridSystem.PlacementModeActive = visible;
         }
+
+        Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = visible;
     }
 
     public void Populate()
@@ -90,9 +115,10 @@ public class InventoryUI : MonoBehaviour
             Destroy(ContentRoot.GetChild(i).gameObject);
         }
 
-        for (int i = 0; i < Items.Count; i++)
+        var source = showingStore ? StoreItems : Items;
+        for (int i = 0; i < source.Count; i++)
         {
-            var item = Items[i];
+            var item = source[i];
             var slot = Instantiate(ItemSlotPrefab, ContentRoot, false);
             slot.transform.localScale = Vector3.one;
 
@@ -151,6 +177,47 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
+    private void EnsureScrollRect()
+    {
+        if (ScrollRect == null)
+        {
+            return;
+        }
+
+        ScrollRect.content = ContentRoot;
+        if (Viewport != null)
+        {
+            ScrollRect.viewport = Viewport;
+        }
+        ScrollRect.horizontal = false;
+        ScrollRect.vertical = true;
+    }
+
+    private void HookTabButtons()
+    {
+        if (InventoryTabButton != null)
+        {
+            InventoryTabButton.onClick.AddListener(ShowInventoryTab);
+        }
+
+        if (StoreTabButton != null)
+        {
+            StoreTabButton.onClick.AddListener(ShowStoreTab);
+        }
+    }
+
+    public void ShowInventoryTab()
+    {
+        showingStore = false;
+        Populate();
+    }
+
+    public void ShowStoreTab()
+    {
+        showingStore = true;
+        Populate();
+    }
+
     private void LayoutItems()
     {
         if (ContentRoot == null || ContentRoot.childCount == 0)
@@ -170,6 +237,7 @@ public class InventoryUI : MonoBehaviour
         }
 
         var columns = Mathf.Max(1, FixedColumns);
+        var itemHeight = firstRect.rect.height;
 
         var verticalSign = ContentRoot.lossyScale.y < 0 ? 1f : -1f;
 
@@ -190,6 +258,13 @@ public class InventoryUI : MonoBehaviour
             var x = paddingLeft + col * ItemStep.x;
             var y = paddingTop + row * ItemStep.y;
             child.anchoredPosition = new Vector2(x, verticalSign * -y);
+        }
+
+        var rows = Mathf.CeilToInt(ContentRoot.childCount / (float)columns);
+        var totalHeight = paddingTop + paddingBottom + itemHeight + Mathf.Max(0, rows - 1) * ItemStep.y;
+        if (totalHeight > ContentRoot.rect.height)
+        {
+            ContentRoot.sizeDelta = new Vector2(ContentRoot.sizeDelta.x, totalHeight);
         }
     }
 
