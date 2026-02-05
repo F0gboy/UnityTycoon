@@ -32,9 +32,6 @@ public class InventoryUI : MonoBehaviour
     public int FixedColumns = 2;
     public Vector2 ItemStep = new Vector2(10f, 20f);
 
-    [Header("Scrolling")]
-    public ScrollRect ScrollRect;
-    public RectTransform Viewport;
 
     [Header("Placement Integration")]
     public GridSystem GridSystem;
@@ -46,7 +43,6 @@ public class InventoryUI : MonoBehaviour
     private void Awake()
     {
         EnsureNoGridLayout();
-        EnsureScrollRect();
         HookTabButtons();
         Populate();
         SetVisible(false, instant: true);
@@ -175,22 +171,6 @@ public class InventoryUI : MonoBehaviour
         {
             Destroy(grid);
         }
-    }
-
-    private void EnsureScrollRect()
-    {
-        if (ScrollRect == null)
-        {
-            return;
-        }
-
-        ScrollRect.content = ContentRoot;
-        if (Viewport != null)
-        {
-            ScrollRect.viewport = Viewport;
-        }
-        ScrollRect.horizontal = false;
-        ScrollRect.vertical = true;
     }
 
     private void HookTabButtons()
