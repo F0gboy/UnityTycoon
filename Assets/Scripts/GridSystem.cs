@@ -19,8 +19,9 @@ public class GridSystem : MonoBehaviour
     public bool RotateWithQAndE = true;
     public bool ShowGhost = true;
     public Material GhostMaterial;
-    public Color GhostValidColor = new Color(0f, 1f, 0f, 0.4f);
-    public Color GhostBlockedColor = new Color(1f, 0f, 0f, 0.4f);
+    public Color GhostValidColor = new Color(0f, 1f, 0f, 0.25f);
+    public Color GhostBlockedColor = new Color(1f, 0f, 0f, 0.25f);
+    public float GhostAlpha = 0.35f;
 
     [Header("Inventory / Placement Mode")]
     public KeyCode ToggleInventoryKey = KeyCode.F;
@@ -331,8 +332,9 @@ public class GridSystem : MonoBehaviour
         {
             DestroyGhost();
             ghostPrefab = prefab;
-            ghostObject = Instantiate(prefab, transform);
+            ghostObject = Instantiate(prefab);
             ghostObject.name = prefab.name + "_Ghost";
+            ghostObject.transform.SetParent(transform, worldPositionStays: true);
             ghostObject.transform.localScale = prefab.transform.localScale;
             DisableColliders(ghostObject);
             ApplyGhostVisuals(ghostObject);
@@ -423,7 +425,8 @@ public class GridSystem : MonoBehaviour
             if (mat != null && mat.HasProperty("_Color"))
             {
                 renderers[i].GetPropertyBlock(ghostBlock);
-                ghostBlock.SetColor("_Color", color);
+                var tinted = new Color(color.r, color.g, color.b, color.a * GhostAlpha);
+                ghostBlock.SetColor("_Color", tinted);
                 renderers[i].SetPropertyBlock(ghostBlock);
             }
         }

@@ -1213,6 +1213,7 @@ MonoBehaviour:
   GhostMaterial: {fileID: 0}
   GhostValidColor: {r: 0, g: 1, b: 0, a: 0.4}
   GhostBlockedColor: {r: 1, g: 0, b: 0, a: 0.4}
+  GhostAlpha: 0.35
   ToggleInventoryKey: 102
   PlacementModeActive: 0
   SelectedIndex: 0
@@ -1724,7 +1725,6 @@ GameObject:
   - component: {fileID: 1448579036}
   - component: {fileID: 1448579035}
   - component: {fileID: 1448579039}
-  - component: {fileID: 1448579040}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1857,36 +1857,6 @@ MonoBehaviour:
   FixedColumns: 2
   ItemStep: {x: 110, y: -110}
   GridSystem: {fileID: 947061021}
---- !u!114 &1448579040
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1448579034}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1aa08ab6e0800fa44ae55d278d1423e3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ScrollRect
-  m_Content: {fileID: 0}
-  m_Horizontal: 1
-  m_Vertical: 1
-  m_MovementType: 1
-  m_Elasticity: 0.1
-  m_Inertia: 1
-  m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 1
-  m_Viewport: {fileID: 0}
-  m_HorizontalScrollbar: {fileID: 0}
-  m_VerticalScrollbar: {fileID: 0}
-  m_HorizontalScrollbarVisibility: 0
-  m_VerticalScrollbarVisibility: 0
-  m_HorizontalScrollbarSpacing: 0
-  m_VerticalScrollbarSpacing: 0
-  m_OnValueChanged:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!1 &1510032395
 GameObject:
   m_ObjectHideFlags: 0

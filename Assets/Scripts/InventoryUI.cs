@@ -39,6 +39,7 @@ public class InventoryUI : MonoBehaviour
     private bool isVisible;
     private Coroutine slideRoutine;
     private bool showingStore;
+    private InventoryItemSlot selectedSlot;
 
     private void Awake()
     {
@@ -106,9 +107,17 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
+        var toDestroy = new List<GameObject>();
         for (int i = ContentRoot.childCount - 1; i >= 0; i--)
         {
-            Destroy(ContentRoot.GetChild(i).gameObject);
+            var child = ContentRoot.GetChild(i);
+            child.SetParent(null, false);
+            toDestroy.Add(child.gameObject);
+        }
+
+        for (int i = 0; i < toDestroy.Count; i++)
+        {
+            Destroy(toDestroy[i]);
         }
 
         var source = showingStore ? StoreItems : Items;
@@ -132,21 +141,15 @@ public class InventoryUI : MonoBehaviour
             }
 
             var index = i;
-            var button = slot.GetComponent<Button>();
-            if (button != null && GridSystem != null)
+            var slotClick = slot.GetComponent<InventoryItemSlot>();
+            if (slotClick == null)
             {
-                button.onClick.AddListener(() =>
-                {
-                    if (item.Prefab != null)
-                    {
-                        GridSystem.SelectPrefab(item.Prefab);
-                    }
-                    else
-                    {
-                        GridSystem.SelectItem(index);
-                    }
-                });
+                slotClick = slot.AddComponent<InventoryItemSlot>();
             }
+            slotClick.Inventory = this;
+            slotClick.ItemIndex = index;
+            slotClick.Prefab = item.Prefab;
+            slotClick.SetSelected(slotClick == selectedSlot);
         }
 
         LayoutItems();
@@ -199,13 +202,45 @@ public class InventoryUI : MonoBehaviour
     public void ShowInventoryTab()
     {
         showingStore = false;
+        selectedSlot = null;
         Populate();
     }
 
     public void ShowStoreTab()
     {
         showingStore = true;
+        selectedSlot = null;
         Populate();
+    }
+
+    public void SetSelectedSlot(InventoryItemSlot slot)
+    {
+        if (selectedSlot != null && selectedSlot != slot)
+        {
+            selectedSlot.SetSelected(false);
+        }
+
+        selectedSlot = slot;
+        if (selectedSlot != null)
+        {
+            selectedSlot.SetSelected(true);
+        }
+    }
+
+    public void SelectItem(int index)
+    {
+        if (GridSystem != null)
+        {
+            GridSystem.SelectItem(index);
+        }
+    }
+
+    public void SelectPrefab(GameObject prefab)
+    {
+        if (GridSystem != null)
+        {
+            GridSystem.SelectPrefab(prefab);
+        }
     }
 
     private void LayoutItems()
