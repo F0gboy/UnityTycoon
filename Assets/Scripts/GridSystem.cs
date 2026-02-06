@@ -17,6 +17,7 @@ public class GridSystem : MonoBehaviour
     public List<GameObject> PlaceablePrefabs = new List<GameObject>();
     public LayerMask PlacementSurfaceMask = ~0;
     public bool RotateWithQAndE = true;
+    public Transform PlacedParent;
     public bool ShowGhost = true;
     public Material GhostMaterial;
     public Color GhostValidColor = new Color(0f, 1f, 0f, 0.25f);
@@ -37,6 +38,7 @@ public class GridSystem : MonoBehaviour
     private GameObject ghostPrefab;
     private MaterialPropertyBlock ghostBlock;
     private GameObject selectedPrefabOverride;
+    private Transform ghostParent;
 
     private void Update()
     {
@@ -124,7 +126,11 @@ public class GridSystem : MonoBehaviour
         }
 
         var worldPos = GetCellWorldPosition(cell);
-        Instantiate(prefab, worldPos, currentRotation, transform);
+        var instance = Instantiate(prefab, worldPos, currentRotation);
+        if (PlacedParent != null)
+        {
+            instance.transform.SetParent(PlacedParent, worldPositionStays: true);
+        }
         occupiedCells.Add(cell);
     }
 
@@ -332,9 +338,10 @@ public class GridSystem : MonoBehaviour
         {
             DestroyGhost();
             ghostPrefab = prefab;
+            EnsureGhostParent();
             ghostObject = Instantiate(prefab);
             ghostObject.name = prefab.name + "_Ghost";
-            ghostObject.transform.SetParent(transform, worldPositionStays: true);
+            ghostObject.transform.SetParent(ghostParent, worldPositionStays: true);
             ghostObject.transform.localScale = prefab.transform.localScale;
             DisableColliders(ghostObject);
             ApplyGhostVisuals(ghostObject);
@@ -378,6 +385,24 @@ public class GridSystem : MonoBehaviour
             ghostObject = null;
         }
         ghostPrefab = null;
+    }
+
+    private void EnsureGhostParent()
+    {
+        if (ghostParent != null)
+        {
+            return;
+        }
+
+        var parentObj = new GameObject("GhostRoot");
+        ghostParent = parentObj.transform;
+        ghostParent.SetParent(transform, worldPositionStays: true);
+
+        var gridScale = transform.lossyScale;
+        ghostParent.localScale = new Vector3(
+            gridScale.x != 0f ? 1f / gridScale.x : 1f,
+            gridScale.y != 0f ? 1f / gridScale.y : 1f,
+            gridScale.z != 0f ? 1f / gridScale.z : 1f);
     }
 
     private void DisableColliders(GameObject root)
