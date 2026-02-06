@@ -135,7 +135,17 @@ public class InventoryUI : MonoBehaviour
             var button = slot.GetComponent<Button>();
             if (button != null && GridSystem != null)
             {
-                button.onClick.AddListener(() => GridSystem.SelectItem(index));
+                button.onClick.AddListener(() =>
+                {
+                    if (item.Prefab != null)
+                    {
+                        GridSystem.SelectPrefab(item.Prefab);
+                    }
+                    else
+                    {
+                        GridSystem.SelectItem(index);
+                    }
+                });
             }
         }
 
@@ -253,5 +263,6 @@ public class InventoryUI : MonoBehaviour
     {
         public string Name;
         public Sprite Icon;
+        public GameObject Prefab;
     }
 }

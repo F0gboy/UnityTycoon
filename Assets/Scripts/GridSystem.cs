@@ -17,6 +17,10 @@ public class GridSystem : MonoBehaviour
     public List<GameObject> PlaceablePrefabs = new List<GameObject>();
     public LayerMask PlacementSurfaceMask = ~0;
     public bool RotateWithQAndE = true;
+    public bool ShowGhost = true;
+    public Material GhostMaterial;
+    public Color GhostValidColor = new Color(0f, 1f, 0f, 0.4f);
+    public Color GhostBlockedColor = new Color(1f, 0f, 0f, 0.4f);
 
     [Header("Inventory / Placement Mode")]
     public KeyCode ToggleInventoryKey = KeyCode.F;
@@ -28,6 +32,10 @@ public class GridSystem : MonoBehaviour
     private Vector3Int hoveredCell;
     private Quaternion currentRotation = Quaternion.identity;
     private readonly List<LineRenderer> runtimeLines = new List<LineRenderer>();
+    private GameObject ghostObject;
+    private GameObject ghostPrefab;
+    private MaterialPropertyBlock ghostBlock;
+    private GameObject selectedPrefabOverride;
 
     private void Update()
     {
@@ -39,6 +47,7 @@ public class GridSystem : MonoBehaviour
         if (!PlacementModeActive)
         {
             SetGridVisible(false);
+            SetGhostVisible(false);
             return;
         }
 
@@ -58,14 +67,17 @@ public class GridSystem : MonoBehaviour
             }
         }
 
-        if (!TryGetHoveredCell(out hoveredCell))
+        if (TryGetHoveredCell(out hoveredCell))
         {
-            return;
+            UpdateGhost(hoveredCell);
+            if (Input.GetMouseButtonDown(0))
+            {
+                TryPlaceAtCell(hoveredCell);
+            }
         }
-
-        if (Input.GetMouseButtonDown(0))
+        else
         {
-            TryPlaceAtCell(hoveredCell);
+            SetGhostVisible(false);
         }
     }
 
@@ -118,10 +130,23 @@ public class GridSystem : MonoBehaviour
     public void SelectItem(int index)
     {
         SelectedIndex = index;
+        selectedPrefabOverride = null;
+        RefreshGhost();
+    }
+
+    public void SelectPrefab(GameObject prefab)
+    {
+        selectedPrefabOverride = prefab;
+        RefreshGhost();
     }
 
     private GameObject GetSelectedPrefab()
     {
+        if (selectedPrefabOverride != null)
+        {
+            return selectedPrefabOverride;
+        }
+
         if (PlaceablePrefabs != null && PlaceablePrefabs.Count > 0)
         {
             if (SelectedIndex < 0 || SelectedIndex >= PlaceablePrefabs.Count)
@@ -283,6 +308,123 @@ public class GridSystem : MonoBehaviour
             if (runtimeLines[i] != null)
             {
                 runtimeLines[i].enabled = isVisible;
+            }
+        }
+    }
+
+    private void RefreshGhost()
+    {
+        if (!ShowGhost)
+        {
+            SetGhostVisible(false);
+            return;
+        }
+
+        var prefab = GetSelectedPrefab();
+        if (prefab == null)
+        {
+            DestroyGhost();
+            return;
+        }
+
+        if (ghostObject == null || ghostPrefab != prefab)
+        {
+            DestroyGhost();
+            ghostPrefab = prefab;
+            ghostObject = Instantiate(prefab, transform);
+            ghostObject.name = prefab.name + "_Ghost";
+            ghostObject.transform.localScale = prefab.transform.localScale;
+            DisableColliders(ghostObject);
+            ApplyGhostVisuals(ghostObject);
+        }
+    }
+
+    private void UpdateGhost(Vector3Int cell)
+    {
+        if (!ShowGhost)
+        {
+            return;
+        }
+
+        RefreshGhost();
+        if (ghostObject == null)
+        {
+            return;
+        }
+
+        ghostObject.transform.position = GetCellWorldPosition(cell);
+        ghostObject.transform.rotation = currentRotation;
+        SetGhostVisible(true);
+
+        var canPlace = !occupiedCells.Contains(cell);
+        ApplyGhostColor(canPlace ? GhostValidColor : GhostBlockedColor);
+    }
+
+    private void SetGhostVisible(bool isVisible)
+    {
+        if (ghostObject != null)
+        {
+            ghostObject.SetActive(isVisible);
+        }
+    }
+
+    private void DestroyGhost()
+    {
+        if (ghostObject != null)
+        {
+            Destroy(ghostObject);
+            ghostObject = null;
+        }
+        ghostPrefab = null;
+    }
+
+    private void DisableColliders(GameObject root)
+    {
+        var colliders = root.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            colliders[i].enabled = false;
+        }
+    }
+
+    private void ApplyGhostVisuals(GameObject root)
+    {
+        var renderers = root.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (GhostMaterial != null)
+            {
+                renderers[i].material = GhostMaterial;
+            }
+            renderers[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderers[i].receiveShadows = false;
+        }
+        ApplyGhostColor(GhostValidColor);
+    }
+
+    private void ApplyGhostColor(Color color)
+    {
+        if (ghostBlock == null)
+        {
+            ghostBlock = new MaterialPropertyBlock();
+        }
+
+        var renderers = ghostObject != null
+            ? ghostObject.GetComponentsInChildren<Renderer>(true)
+            : null;
+        if (renderers == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            var mat = renderers[i].sharedMaterial;
+            if (mat != null && mat.HasProperty("_Color"))
+            {
+                renderers[i].GetPropertyBlock(ghostBlock);
+                ghostBlock.SetColor("_Color", color);
+                renderers[i].SetPropertyBlock(ghostBlock);
             }
         }
     }
