@@ -8,10 +8,15 @@ public class InventoryUI : MonoBehaviour
     public RectTransform InventoryPanel;
     public RectTransform ContentRoot;
     public GameObject ItemSlotPrefab;
+    public GameObject StoreItemSlotPrefab;
 
     [Header("Inventory Data")]
     public List<InventoryItem> Items = new List<InventoryItem>();
     public List<InventoryItem> StoreItems = new List<InventoryItem>();
+
+    [Header("Currency")]
+    public int StartingCoins = 500;
+    public Text CoinsText;
 
     [Header("Input")]
     public KeyCode ToggleKey = KeyCode.F;
@@ -40,11 +45,14 @@ public class InventoryUI : MonoBehaviour
     private Coroutine slideRoutine;
     private bool showingStore;
     private InventoryItemSlot selectedSlot;
+    private int coins;
 
     private void Awake()
     {
         EnsureNoGridLayout();
         HookTabButtons();
+        coins = StartingCoins;
+        UpdateCoinsText();
         Populate();
         SetVisible(false, instant: true);
     }
@@ -121,10 +129,13 @@ public class InventoryUI : MonoBehaviour
         }
 
         var source = showingStore ? StoreItems : Items;
+        var prefabToUse = showingStore && StoreItemSlotPrefab != null
+            ? StoreItemSlotPrefab
+            : ItemSlotPrefab;
         for (int i = 0; i < source.Count; i++)
         {
             var item = source[i];
-            var slot = Instantiate(ItemSlotPrefab, ContentRoot, false);
+            var slot = Instantiate(prefabToUse, ContentRoot, false);
             slot.transform.localScale = Vector3.one;
 
             var image = slot.GetComponentInChildren<Image>();
@@ -140,6 +151,15 @@ public class InventoryUI : MonoBehaviour
                 text.text = item.Name;
             }
 
+            if (showingStore)
+            {
+                var priceText = FindTextByName(slot.transform, "Price");
+                if (priceText != null)
+                {
+                    priceText.text = item.Cost.ToString();
+                }
+            }
+
             var index = i;
             var slotClick = slot.GetComponent<InventoryItemSlot>();
             if (slotClick == null)
@@ -149,6 +169,11 @@ public class InventoryUI : MonoBehaviour
             slotClick.Inventory = this;
             slotClick.ItemIndex = index;
             slotClick.Prefab = item.Prefab;
+            slotClick.Footprint = item.Footprint;
+            slotClick.ItemName = item.Name;
+            slotClick.Icon = item.Icon;
+            slotClick.Cost = item.Cost;
+            slotClick.ConfigureStore(showingStore);
             slotClick.SetSelected(slotClick == selectedSlot);
         }
 
@@ -213,6 +238,41 @@ public class InventoryUI : MonoBehaviour
         Populate();
     }
 
+    public bool TryBuyItem(string name, Sprite icon, GameObject prefab, Vector2Int footprint, int cost)
+    {
+        if (cost < 0)
+        {
+            cost = 0;
+        }
+
+        if (coins < cost)
+        {
+            return false;
+        }
+
+        coins -= cost;
+        UpdateCoinsText();
+
+        var newItem = new InventoryItem
+        {
+            Name = name,
+            Icon = icon,
+            Prefab = prefab,
+            Footprint = footprint,
+            Cost = cost
+        };
+        Items.Add(newItem);
+        return true;
+    }
+
+    private void UpdateCoinsText()
+    {
+        if (CoinsText != null)
+        {
+            CoinsText.text = coins.ToString();
+        }
+    }
+
     public void SetSelectedSlot(InventoryItemSlot slot)
     {
         if (selectedSlot != null && selectedSlot != slot)
@@ -240,6 +300,22 @@ public class InventoryUI : MonoBehaviour
         if (GridSystem != null)
         {
             GridSystem.SelectPrefab(prefab);
+        }
+    }
+
+    public void SelectItem(int index, Vector2Int footprint)
+    {
+        if (GridSystem != null)
+        {
+            GridSystem.SelectItem(index, footprint);
+        }
+    }
+
+    public void SelectPrefab(GameObject prefab, Vector2Int footprint)
+    {
+        if (GridSystem != null)
+        {
+            GridSystem.SelectPrefab(prefab, footprint);
         }
     }
 
@@ -293,11 +369,26 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
+    private Text FindTextByName(Transform root, string objectName)
+    {
+        var texts = root.GetComponentsInChildren<Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            if (texts[i].name == objectName)
+            {
+                return texts[i];
+            }
+        }
+        return null;
+    }
+
     [System.Serializable]
     public class InventoryItem
     {
         public string Name;
         public Sprite Icon;
         public GameObject Prefab;
+        public Vector2Int Footprint = Vector2Int.one;
+        public int Cost;
     }
 }

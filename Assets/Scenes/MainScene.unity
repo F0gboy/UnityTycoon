@@ -652,8 +652,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -56.063, y: 26.03}
-  m_SizeDelta: {x: 100, y: 124}
+  m_AnchoredPosition: {x: -56.063, y: 24.26304}
+  m_SizeDelta: {x: 100, y: 152.79141}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &680972714
 GameObject:
@@ -1209,6 +1209,9 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   RotateWithQAndE: 1
+  RotateWithR: 1
+  RRotationStep: 90
+  PlacedParent: {fileID: 0}
   ShowGhost: 1
   GhostMaterial: {fileID: 0}
   GhostValidColor: {r: 0, g: 1, b: 0, a: 0.4}
@@ -1834,17 +1837,16 @@ MonoBehaviour:
   InventoryPanel: {fileID: 113327825}
   ContentRoot: {fileID: 561775047}
   ItemSlotPrefab: {fileID: 7168390794749128105, guid: 1edbf968d685a3141b959dcca6ef20b7, type: 3}
-  Items:
+  StoreItemSlotPrefab: {fileID: 7168390794749128105, guid: 091cfd560645b0b4486270d66e8e72f2, type: 3}
+  Items: []
+  StoreItems:
   - Name: Basic Miner
-    Icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+    Icon: {fileID: 0}
     Prefab: {fileID: 5785298354766236308, guid: dc81d9595d6dc064495a3ff58682afaf, type: 3}
-  - Name: Basic Miner
-    Icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-    Prefab: {fileID: 0}
-  - Name: Basic Miner
-    Icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-    Prefab: {fileID: 0}
-  StoreItems: []
+    Footprint: {x: 3, y: 3}
+    Cost: 100
+  StartingCoins: 500
+  CoinsText: {fileID: 0}
   ToggleKey: 102
   KeepCursorUnlockedWhileVisible: 1
   InventoryTabButton: {fileID: 2139938360}

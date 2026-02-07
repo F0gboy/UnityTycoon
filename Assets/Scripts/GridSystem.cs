@@ -17,6 +17,8 @@ public class GridSystem : MonoBehaviour
     public List<GameObject> PlaceablePrefabs = new List<GameObject>();
     public LayerMask PlacementSurfaceMask = ~0;
     public bool RotateWithQAndE = true;
+    public bool RotateWithR = true;
+    public float RRotationStep = 90f;
     public Transform PlacedParent;
     public bool ShowGhost = true;
     public Material GhostMaterial;
@@ -39,6 +41,7 @@ public class GridSystem : MonoBehaviour
     private MaterialPropertyBlock ghostBlock;
     private GameObject selectedPrefabOverride;
     private Transform ghostParent;
+    private Vector2Int selectedFootprint = Vector2Int.one;
 
     private void Update()
     {
@@ -68,6 +71,11 @@ public class GridSystem : MonoBehaviour
             {
                 currentRotation *= Quaternion.Euler(0f, 90f, 0f);
             }
+        }
+
+        if (RotateWithR && Input.GetKeyDown(KeyCode.R))
+        {
+            currentRotation *= Quaternion.Euler(0f, RRotationStep, 0f);
         }
 
         if (TryGetHoveredCell(out hoveredCell))
@@ -120,7 +128,7 @@ public class GridSystem : MonoBehaviour
             return;
         }
 
-        if (occupiedCells.Contains(cell))
+        if (!CanPlaceFootprint(cell, selectedFootprint))
         {
             return;
         }
@@ -131,19 +139,36 @@ public class GridSystem : MonoBehaviour
         {
             instance.transform.SetParent(PlacedParent, worldPositionStays: true);
         }
-        occupiedCells.Add(cell);
+        MarkFootprintOccupied(cell, selectedFootprint);
     }
 
     public void SelectItem(int index)
     {
         SelectedIndex = index;
         selectedPrefabOverride = null;
+        selectedFootprint = Vector2Int.one;
         RefreshGhost();
     }
 
     public void SelectPrefab(GameObject prefab)
     {
         selectedPrefabOverride = prefab;
+        selectedFootprint = Vector2Int.one;
+        RefreshGhost();
+    }
+
+    public void SelectItem(int index, Vector2Int footprint)
+    {
+        SelectedIndex = index;
+        selectedPrefabOverride = null;
+        selectedFootprint = NormalizeFootprint(footprint);
+        RefreshGhost();
+    }
+
+    public void SelectPrefab(GameObject prefab, Vector2Int footprint)
+    {
+        selectedPrefabOverride = prefab;
+        selectedFootprint = NormalizeFootprint(footprint);
         RefreshGhost();
     }
 
@@ -361,12 +386,17 @@ public class GridSystem : MonoBehaviour
             return;
         }
 
+        var canPlace = CanPlaceFootprint(cell, selectedFootprint);
+        if (!canPlace)
+        {
+            SetGhostVisible(false);
+            return;
+        }
+
         ghostObject.transform.position = GetCellWorldPosition(cell);
         ghostObject.transform.rotation = currentRotation;
         SetGhostVisible(true);
-
-        var canPlace = !occupiedCells.Contains(cell);
-        ApplyGhostColor(canPlace ? GhostValidColor : GhostBlockedColor);
+        ApplyGhostColor(GhostValidColor);
     }
 
     private void SetGhostVisible(bool isVisible)
@@ -455,6 +485,54 @@ public class GridSystem : MonoBehaviour
                 renderers[i].SetPropertyBlock(ghostBlock);
             }
         }
+    }
+
+    private bool CanPlaceFootprint(Vector3Int cell, Vector2Int footprint)
+    {
+        var size = NormalizeFootprint(footprint);
+        if (!IsFootprintWithinBounds(cell, size))
+        {
+            return false;
+        }
+
+        for (int x = 0; x < size.x; x++)
+        {
+            for (int z = 0; z < size.y; z++)
+            {
+                var c = new Vector3Int(cell.x + x, 0, cell.z + z);
+                if (occupiedCells.Contains(c))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private void MarkFootprintOccupied(Vector3Int cell, Vector2Int footprint)
+    {
+        var size = NormalizeFootprint(footprint);
+        for (int x = 0; x < size.x; x++)
+        {
+            for (int z = 0; z < size.y; z++)
+            {
+                occupiedCells.Add(new Vector3Int(cell.x + x, 0, cell.z + z));
+            }
+        }
+    }
+
+    private bool IsFootprintWithinBounds(Vector3Int cell, Vector2Int footprint)
+    {
+        return cell.x >= 0
+            && cell.z >= 0
+            && cell.x + footprint.x <= GridSize.x
+            && cell.z + footprint.y <= GridSize.y;
+    }
+
+    private Vector2Int NormalizeFootprint(Vector2Int footprint)
+    {
+        return new Vector2Int(Mathf.Max(1, footprint.x), Mathf.Max(1, footprint.y));
     }
 
     private void UpdateLineColors()
