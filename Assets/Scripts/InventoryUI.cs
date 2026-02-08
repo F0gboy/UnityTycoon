@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class InventoryUI : MonoBehaviour
 {
@@ -16,7 +17,7 @@ public class InventoryUI : MonoBehaviour
 
     [Header("Currency")]
     public int StartingCoins = 500;
-    public Text CoinsText;
+    public TMP_Text CoinsTextTMP;
 
     [Header("Input")]
     public KeyCode ToggleKey = KeyCode.F;
@@ -145,18 +146,18 @@ public class InventoryUI : MonoBehaviour
                 image.enabled = item.Icon != null;
             }
 
-            var text = slot.GetComponentInChildren<Text>();
-            if (text != null)
+            var nameText = slot.GetComponentInChildren<TMP_Text>();
+            if (nameText != null)
             {
-                text.text = item.Name;
+                nameText.text = item.Name;
             }
 
             if (showingStore)
             {
-                var priceText = FindTextByName(slot.transform, "Price");
-                if (priceText != null)
+                var priceTmp = FindTMPByName(slot.transform, "Price");
+                if (priceTmp != null)
                 {
-                    priceText.text = item.Cost.ToString();
+                    priceTmp.text = item.Cost.ToString();
                 }
             }
 
@@ -267,9 +268,9 @@ public class InventoryUI : MonoBehaviour
 
     private void UpdateCoinsText()
     {
-        if (CoinsText != null)
+        if (CoinsTextTMP != null)
         {
-            CoinsText.text = coins.ToString();
+            CoinsTextTMP.text = coins.ToString();
         }
     }
 
@@ -369,12 +370,19 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    private Text FindTextByName(Transform root, string objectName)
+    private TMP_Text FindTMPByName(Transform root, string objectName)
     {
-        var texts = root.GetComponentsInChildren<Text>(true);
+        var texts = root.GetComponentsInChildren<TMP_Text>(true);
         for (int i = 0; i < texts.Length; i++)
         {
             if (texts[i].name == objectName)
+            {
+                return texts[i];
+            }
+        }
+        for (int i = 0; i < texts.Length; i++)
+        {
+            if (texts[i].name.ToLowerInvariant().Contains(objectName.ToLowerInvariant()))
             {
                 return texts[i];
             }
