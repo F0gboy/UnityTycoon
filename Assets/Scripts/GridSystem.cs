@@ -31,6 +31,7 @@ public class GridSystem : MonoBehaviour
     public bool PlacementModeActive = false;
     public int SelectedIndex = 0;
     public bool UseInputToggle = true;
+    public System.Action<GameObject> ItemPlaced;
 
     private readonly HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int>();
     private Vector3Int hoveredCell;
@@ -139,6 +140,7 @@ public class GridSystem : MonoBehaviour
         {
             instance.transform.SetParent(PlacedParent, worldPositionStays: true);
         }
+        ItemPlaced?.Invoke(prefab);
         MarkFootprintOccupied(cell, selectedFootprint);
     }
 
@@ -148,6 +150,14 @@ public class GridSystem : MonoBehaviour
         selectedPrefabOverride = null;
         selectedFootprint = Vector2Int.one;
         RefreshGhost();
+    }
+
+    public void ClearSelection()
+    {
+        SelectedIndex = -1;
+        selectedPrefabOverride = null;
+        selectedFootprint = Vector2Int.one;
+        DestroyGhost();
     }
 
     public void SelectPrefab(GameObject prefab)
@@ -181,7 +191,12 @@ public class GridSystem : MonoBehaviour
 
         if (PlaceablePrefabs != null && PlaceablePrefabs.Count > 0)
         {
-            if (SelectedIndex < 0 || SelectedIndex >= PlaceablePrefabs.Count)
+            if (SelectedIndex < 0)
+            {
+                return null;
+            }
+
+            if (SelectedIndex >= PlaceablePrefabs.Count)
             {
                 SelectedIndex = Mathf.Clamp(SelectedIndex, 0, PlaceablePrefabs.Count - 1);
             }

@@ -1845,8 +1845,9 @@ MonoBehaviour:
     Prefab: {fileID: 5785298354766236308, guid: dc81d9595d6dc064495a3ff58682afaf, type: 3}
     Footprint: {x: 3, y: 3}
     Cost: 100
+    Quantity: 1
   StartingCoins: 500
-  CoinsText: {fileID: 0}
+  CoinsTextTMP: {fileID: 482880758}
   ToggleKey: 102
   KeepCursorUnlockedWhileVisible: 1
   InventoryTabButton: {fileID: 2139938360}

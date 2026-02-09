@@ -54,6 +54,7 @@ public class InventoryUI : MonoBehaviour
         HookTabButtons();
         coins = StartingCoins;
         UpdateCoinsText();
+        HookGridEvents();
         Populate();
         SetVisible(false, instant: true);
     }
@@ -107,6 +108,15 @@ public class InventoryUI : MonoBehaviour
 
         Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = visible;
+
+        if (!visible)
+        {
+            SetSelectedSlot(null);
+            if (GridSystem != null)
+            {
+                GridSystem.ClearSelection();
+            }
+        }
     }
 
     public void Populate()
@@ -149,7 +159,9 @@ public class InventoryUI : MonoBehaviour
             var nameText = slot.GetComponentInChildren<TMP_Text>();
             if (nameText != null)
             {
-                nameText.text = item.Name;
+                nameText.text = showingStore
+                    ? item.Name
+                    : item.Quantity + "x " + item.Name;
             }
 
             if (showingStore)
@@ -158,6 +170,14 @@ public class InventoryUI : MonoBehaviour
                 if (priceTmp != null)
                 {
                     priceTmp.text = item.Cost.ToString();
+                }
+            }
+            else
+            {
+                var countTmp = FindTMPByName(slot.transform, "Count");
+                if (countTmp != null)
+                {
+                    countTmp.text = item.Quantity.ToString();
                 }
             }
 
@@ -254,15 +274,24 @@ public class InventoryUI : MonoBehaviour
         coins -= cost;
         UpdateCoinsText();
 
-        var newItem = new InventoryItem
+        var existing = FindItemByPrefab(prefab);
+        if (existing != null)
         {
-            Name = name,
-            Icon = icon,
-            Prefab = prefab,
-            Footprint = footprint,
-            Cost = cost
-        };
-        Items.Add(newItem);
+            existing.Quantity += 1;
+        }
+        else
+        {
+            var newItem = new InventoryItem
+            {
+                Name = name,
+                Icon = icon,
+                Prefab = prefab,
+                Footprint = footprint,
+                Cost = cost,
+                Quantity = 1
+            };
+            Items.Add(newItem);
+        }
         return true;
     }
 
@@ -370,6 +399,54 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
+    private void HookGridEvents()
+    {
+        if (GridSystem != null)
+        {
+            GridSystem.ItemPlaced -= HandleItemPlaced;
+            GridSystem.ItemPlaced += HandleItemPlaced;
+        }
+    }
+
+    private void HandleItemPlaced(GameObject prefab)
+    {
+        if (prefab == null)
+        {
+            return;
+        }
+
+        var item = FindItemByPrefab(prefab);
+        if (item == null)
+        {
+            return;
+        }
+
+        item.Quantity = Mathf.Max(0, item.Quantity - 1);
+        if (item.Quantity == 0)
+        {
+            Items.Remove(item);
+            SetSelectedSlot(null);
+            if (GridSystem != null)
+            {
+                GridSystem.ClearSelection();
+            }
+        }
+
+        Populate();
+    }
+
+    private InventoryItem FindItemByPrefab(GameObject prefab)
+    {
+        for (int i = 0; i < Items.Count; i++)
+        {
+            if (Items[i].Prefab == prefab)
+            {
+                return Items[i];
+            }
+        }
+        return null;
+    }
+
     private TMP_Text FindTMPByName(Transform root, string objectName)
     {
         var texts = root.GetComponentsInChildren<TMP_Text>(true);
@@ -398,5 +475,6 @@ public class InventoryUI : MonoBehaviour
         public GameObject Prefab;
         public Vector2Int Footprint = Vector2Int.one;
         public int Cost;
+        public int Quantity = 1;
     }
 }
