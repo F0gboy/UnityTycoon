@@ -384,6 +384,7 @@ public class GridSystem : MonoBehaviour
             ghostObject.transform.SetParent(ghostParent, worldPositionStays: true);
             ghostObject.transform.localScale = prefab.transform.localScale;
             DisableColliders(ghostObject);
+            DisableGhostBehaviours(ghostObject);
             ApplyGhostVisuals(ghostObject);
         }
     }
@@ -459,19 +460,43 @@ public class GridSystem : MonoBehaviour
         }
     }
 
+    private void DisableGhostBehaviours(GameObject root)
+    {
+        var droppers = root.GetComponentsInChildren<Dropper>(true);
+        for (int i = 0; i < droppers.Length; i++)
+        {
+            droppers[i].enabled = false;
+        }
+    }
+
     private void ApplyGhostVisuals(GameObject root)
     {
         var renderers = root.GetComponentsInChildren<Renderer>(true);
+        var overrideMaterial = GetGhostMaterialOverride(root);
         for (int i = 0; i < renderers.Length; i++)
         {
-            if (GhostMaterial != null)
+            var materialToUse = overrideMaterial != null ? overrideMaterial : GhostMaterial;
+            if (materialToUse != null)
             {
-                renderers[i].material = GhostMaterial;
+                renderers[i].material = materialToUse;
             }
             renderers[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderers[i].receiveShadows = false;
         }
         ApplyGhostColor(GhostValidColor);
+    }
+
+    private Material GetGhostMaterialOverride(GameObject root)
+    {
+        var droppers = root.GetComponentsInChildren<Dropper>(true);
+        for (int i = 0; i < droppers.Length; i++)
+        {
+            if (droppers[i].GhostPreviewMaterial != null)
+            {
+                return droppers[i].GhostPreviewMaterial;
+            }
+        }
+        return null;
     }
 
     private void ApplyGhostColor(Color color)

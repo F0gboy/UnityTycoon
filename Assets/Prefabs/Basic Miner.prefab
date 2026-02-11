@@ -31,7 +31,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 2.716, z: 1.016}
   m_LocalScale: {x: 0.1223871, y: 0.14097813, z: 0.114853464}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 7137576173778971129}
   m_Father: {fileID: 2001105362681720587}
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
 --- !u!33 &4760019903720650601
@@ -112,6 +113,37 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &4619728223086655921
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7137576173778971129}
+  m_Layer: 0
+  m_Name: DropPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7137576173778971129
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4619728223086655921}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0, z: -0.46}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1273728566071123295}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5785298354766236308
 GameObject:
   m_ObjectHideFlags: 0
@@ -124,6 +156,7 @@ GameObject:
   - component: {fileID: 491182550580932}
   - component: {fileID: 7553653409872470119}
   - component: {fileID: 6207211292855017878}
+  - component: {fileID: 1532593178410883279}
   m_Layer: 0
   m_Name: Basic Miner
   m_TagString: Untagged
@@ -228,6 +261,23 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1532593178410883279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5785298354766236308}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 988acc77b159432498498a9af0a87b31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Dropper
+  DropPrefab: {fileID: 8254736094986217955, guid: f8a336f359f2eb2408a77d177d21018a, type: 3}
+  DropPoint: {fileID: 7137576173778971129}
+  DropInterval: 1
+  DroppedParent: {fileID: 0}
+  GhostPreviewMaterial: {fileID: 2100000, guid: 3f17a296b8abcc043ba1793ac093556a, type: 2}
 --- !u!1 &6406560672099587000
 GameObject:
   m_ObjectHideFlags: 0
