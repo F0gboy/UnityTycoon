@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 7362958600211578033}
   m_Layer: 0
   m_Name: Ore
-  m_TagString: Untagged
+  m_TagString: Cube
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -99,7 +99,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8254736094986217955}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: b9e22c2c6dc3a664fad41c96c6278a55, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0

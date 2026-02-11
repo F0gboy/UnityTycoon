@@ -1846,6 +1846,12 @@ MonoBehaviour:
     Footprint: {x: 3, y: 3}
     Cost: 100
     Quantity: 1
+  - Name: Basic Conveyor
+    Icon: {fileID: 0}
+    Prefab: {fileID: 9061606983911019492, guid: fb96c456b8304094cb8cf4116cebf29f, type: 3}
+    Footprint: {x: 3, y: 3}
+    Cost: 100
+    Quantity: 1
   StartingCoins: 500
   CoinsTextTMP: {fileID: 482880758}
   ToggleKey: 102
