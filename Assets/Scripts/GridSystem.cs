@@ -129,7 +129,8 @@ public class GridSystem : MonoBehaviour
             return;
         }
 
-        if (!CanPlaceFootprint(cell, selectedFootprint))
+        var effectiveFootprint = GetRotatedFootprint(selectedFootprint);
+        if (!CanPlaceFootprint(cell, effectiveFootprint))
         {
             return;
         }
@@ -141,7 +142,7 @@ public class GridSystem : MonoBehaviour
             instance.transform.SetParent(PlacedParent, worldPositionStays: true);
         }
         ItemPlaced?.Invoke(prefab);
-        MarkFootprintOccupied(cell, selectedFootprint);
+        MarkFootprintOccupied(cell, effectiveFootprint);
     }
 
     public void SelectItem(int index)
@@ -402,7 +403,9 @@ public class GridSystem : MonoBehaviour
             return;
         }
 
-        var canPlace = CanPlaceFootprint(cell, selectedFootprint);
+        var effectiveFootprint = GetRotatedFootprint(selectedFootprint);
+        var canPlace = CanPlaceFootprint(cell, effectiveFootprint);
+
         if (!canPlace)
         {
             SetGhostVisible(false);
@@ -573,6 +576,23 @@ public class GridSystem : MonoBehaviour
     private Vector2Int NormalizeFootprint(Vector2Int footprint)
     {
         return new Vector2Int(Mathf.Max(1, footprint.x), Mathf.Max(1, footprint.y));
+    }
+
+    private Vector2Int GetRotatedFootprint(Vector2Int footprint)
+    {
+        var size = NormalizeFootprint(footprint);
+        var yawSteps = Mathf.RoundToInt(currentRotation.eulerAngles.y / 90f) % 4;
+        if (yawSteps < 0)
+        {
+            yawSteps += 4;
+        }
+
+        if (yawSteps % 2 == 1)
+        {
+            return new Vector2Int(size.y, size.x);
+        }
+
+        return size;
     }
 
     private void UpdateLineColors()

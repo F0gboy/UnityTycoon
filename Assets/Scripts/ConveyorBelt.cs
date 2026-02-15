@@ -8,6 +8,8 @@ public class ConveyorBelt : MonoBehaviour
     public Vector3 Direction = Vector3.forward;
     public bool UseLocalDirection = true;
     public bool OverrideHorizontalVelocity = true;
+    public float HorizontalAcceleration = 25f;
+    public float ExitImpulse = 0.75f;
 
     [Header("Collider")]
     public bool UseTrigger = false;
@@ -58,6 +60,37 @@ public class ConveyorBelt : MonoBehaviour
         MoveTarget(other, collision.rigidbody);
     }
 
+    private void OnTriggerExit(Collider other)
+    {
+        if (!UseTrigger)
+        {
+            return;
+        }
+
+        if (!IsAffected(other))
+        {
+            return;
+        }
+
+        ApplyExitImpulse(other.attachedRigidbody);
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (UseTrigger)
+        {
+            return;
+        }
+
+        var other = collision.collider;
+        if (!IsAffected(other))
+        {
+            return;
+        }
+
+        ApplyExitImpulse(collision.rigidbody);
+    }
+
     private void MoveTarget(Collider other, Rigidbody rb)
     {
         var beltVelocity = GetBeltVelocity();
@@ -65,8 +98,11 @@ public class ConveyorBelt : MonoBehaviour
         {
             if (OverrideHorizontalVelocity)
             {
-                var v = rb.velocity;
-                rb.velocity = new Vector3(beltVelocity.x, v.y, beltVelocity.z);
+                var v = rb.linearVelocity;
+                var current = new Vector3(v.x, 0f, v.z);
+                var target = new Vector3(beltVelocity.x, 0f, beltVelocity.z);
+                var next = Vector3.MoveTowards(current, target, HorizontalAcceleration * Time.fixedDeltaTime);
+                rb.linearVelocity = new Vector3(next.x, v.y, next.z);
             }
             else
             {
@@ -75,8 +111,29 @@ public class ConveyorBelt : MonoBehaviour
             return;
         }
 
-        var target = other.transform.position + beltVelocity * Time.fixedDeltaTime;
-        other.transform.position = target;
+        var nextPos = other.transform.position + beltVelocity * Time.fixedDeltaTime;
+        other.transform.position = nextPos;
+    }
+
+    private void ApplyExitImpulse(Rigidbody rb)
+    {
+        if (rb == null || rb.isKinematic)
+        {
+            return;
+        }
+
+        if (ExitImpulse <= 0f)
+        {
+            return;
+        }
+
+        var dir = GetBeltVelocity();
+        if (dir.sqrMagnitude < 0.001f)
+        {
+            return;
+        }
+
+        rb.AddForce(dir.normalized * ExitImpulse, ForceMode.VelocityChange);
     }
 
     private Vector3 GetBeltVelocity()
