@@ -8,6 +8,7 @@ public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerEx
     public int ItemIndex;
     public GameObject Prefab;
     public Vector2Int Footprint = Vector2Int.one;
+    public Vector3 PlacementOffset = Vector3.zero;
     public string ItemName;
     public Sprite Icon;
     public int Cost;
@@ -95,11 +96,11 @@ public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerEx
         Inventory.SetSelectedSlot(this);
         if (Prefab != null)
         {
-            Inventory.SelectPrefab(Prefab, Footprint);
+            Inventory.SelectPrefab(Prefab, Footprint, PlacementOffset);
         }
         else
         {
-            Inventory.SelectItem(ItemIndex, Footprint);
+            Inventory.SelectItem(ItemIndex, Footprint, PlacementOffset);
         }
     }
 
@@ -110,7 +111,7 @@ public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerEx
             return;
         }
 
-        Inventory.TryBuyItem(ItemName, Icon, Prefab, Footprint, Cost);
+        Inventory.TryBuyItem(ItemName, Icon, Prefab, Footprint, PlacementOffset, Cost);
     }
 
     public void OnPointerEnter(PointerEventData eventData)

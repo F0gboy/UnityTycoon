@@ -26,6 +26,11 @@ public class GridSystem : MonoBehaviour
     public Color GhostBlockedColor = new Color(1f, 0f, 0f, 0.25f);
     public float GhostAlpha = 0.35f;
 
+    [Header("Debug Cell Overlay")]
+    public bool ShowDebugCellOverlay = true;
+    public Color GhostCellColor = new Color(1f, 0.75f, 0f, 0.42f);
+    public Color GhostCellBlockedColor = new Color(1f, 0f, 0f, 0.6f);
+
     [Header("Inventory / Placement Mode")]
     public KeyCode ToggleInventoryKey = KeyCode.F;
     public bool PlacementModeActive = false;
@@ -43,6 +48,11 @@ public class GridSystem : MonoBehaviour
     private GameObject selectedPrefabOverride;
     private Transform ghostParent;
     private Vector2Int selectedFootprint = Vector2Int.one;
+    private Vector3 selectedPlacementOffset = Vector3.zero;
+    private bool hasGhostPreviewCells;
+    private Vector3Int ghostPreviewCell;
+    private Vector2Int ghostPreviewFootprint = Vector2Int.one;
+    private bool ghostPreviewCanPlace;
 
     private void Update()
     {
@@ -55,6 +65,7 @@ public class GridSystem : MonoBehaviour
         {
             SetGridVisible(false);
             SetGhostVisible(false);
+            hasGhostPreviewCells = false;
             return;
         }
 
@@ -90,6 +101,7 @@ public class GridSystem : MonoBehaviour
         else
         {
             SetGhostVisible(false);
+            hasGhostPreviewCells = false;
         }
     }
 
@@ -130,19 +142,28 @@ public class GridSystem : MonoBehaviour
         }
 
         var effectiveFootprint = GetRotatedFootprint(selectedFootprint);
-        if (!CanPlaceFootprint(cell, effectiveFootprint))
+        var centerAnchorOffset = GetFootprintCenterAnchorOffset(effectiveFootprint);
+
+        GetPlacementOffsets(out var cellOffset, out var worldRemainderOffset);
+        var placementCell = new Vector3Int(
+            cell.x + cellOffset.x - centerAnchorOffset.x,
+            0,
+            cell.z + cellOffset.z - centerAnchorOffset.z);
+
+        if (!CanPlaceFootprint(placementCell, effectiveFootprint))
         {
             return;
         }
 
-        var worldPos = GetCellWorldPosition(cell);
+        var footprintVisualOffset = GetFootprintVisualOffset(effectiveFootprint);
+        var worldPos = GetCellWorldPosition(placementCell) + footprintVisualOffset + worldRemainderOffset;
         var instance = Instantiate(prefab, worldPos, currentRotation);
         if (PlacedParent != null)
         {
             instance.transform.SetParent(PlacedParent, worldPositionStays: true);
         }
         ItemPlaced?.Invoke(prefab);
-        MarkFootprintOccupied(cell, effectiveFootprint);
+        MarkFootprintOccupied(placementCell, effectiveFootprint);
     }
 
     public void SelectItem(int index)
@@ -150,6 +171,7 @@ public class GridSystem : MonoBehaviour
         SelectedIndex = index;
         selectedPrefabOverride = null;
         selectedFootprint = Vector2Int.one;
+        selectedPlacementOffset = Vector3.zero;
         RefreshGhost();
     }
 
@@ -158,6 +180,7 @@ public class GridSystem : MonoBehaviour
         SelectedIndex = -1;
         selectedPrefabOverride = null;
         selectedFootprint = Vector2Int.one;
+        selectedPlacementOffset = Vector3.zero;
         DestroyGhost();
     }
 
@@ -165,6 +188,7 @@ public class GridSystem : MonoBehaviour
     {
         selectedPrefabOverride = prefab;
         selectedFootprint = Vector2Int.one;
+        selectedPlacementOffset = Vector3.zero;
         RefreshGhost();
     }
 
@@ -173,6 +197,7 @@ public class GridSystem : MonoBehaviour
         SelectedIndex = index;
         selectedPrefabOverride = null;
         selectedFootprint = NormalizeFootprint(footprint);
+        selectedPlacementOffset = Vector3.zero;
         RefreshGhost();
     }
 
@@ -180,6 +205,24 @@ public class GridSystem : MonoBehaviour
     {
         selectedPrefabOverride = prefab;
         selectedFootprint = NormalizeFootprint(footprint);
+        selectedPlacementOffset = Vector3.zero;
+        RefreshGhost();
+    }
+
+    public void SelectItem(int index, Vector2Int footprint, Vector3 placementOffset)
+    {
+        SelectedIndex = index;
+        selectedPrefabOverride = null;
+        selectedFootprint = NormalizeFootprint(footprint);
+        selectedPlacementOffset = placementOffset;
+        RefreshGhost();
+    }
+
+    public void SelectPrefab(GameObject prefab, Vector2Int footprint, Vector3 placementOffset)
+    {
+        selectedPrefabOverride = prefab;
+        selectedFootprint = NormalizeFootprint(footprint);
+        selectedPlacementOffset = placementOffset;
         RefreshGhost();
     }
 
@@ -246,9 +289,39 @@ public class GridSystem : MonoBehaviour
 
         if (Application.isPlaying)
         {
+            DrawDebugCellOverlay();
+
             var cellPos = GetCellWorldPosition(hoveredCell);
             Gizmos.color = new Color(0f, 1f, 0f, 0.25f);
             Gizmos.DrawCube(cellPos, new Vector3(CellSize, 0.02f, CellSize));
+        }
+    }
+
+    private void DrawDebugCellOverlay()
+    {
+        if (!ShowDebugCellOverlay)
+        {
+            return;
+        }
+
+        var ySize = Mathf.Max(0.01f, GridLineWidth);
+        var cellVisualSize = new Vector3(CellSize * 0.9f, ySize, CellSize * 0.9f);
+
+        if (!hasGhostPreviewCells)
+        {
+            return;
+        }
+
+        for (int x = 0; x < ghostPreviewFootprint.x; x++)
+        {
+            for (int z = 0; z < ghostPreviewFootprint.y; z++)
+            {
+                var c = new Vector3Int(ghostPreviewCell.x + x, 0, ghostPreviewCell.z + z);
+                var inBounds = c.x >= 0 && c.z >= 0 && c.x < GridSize.x && c.z < GridSize.y;
+                var blocked = !inBounds || occupiedCells.Contains(c);
+                Gizmos.color = blocked ? GhostCellBlockedColor : GhostCellColor;
+                Gizmos.DrawCube(GetCellWorldPosition(c), cellVisualSize);
+            }
         }
     }
 
@@ -404,7 +477,21 @@ public class GridSystem : MonoBehaviour
         }
 
         var effectiveFootprint = GetRotatedFootprint(selectedFootprint);
-        var canPlace = CanPlaceFootprint(cell, effectiveFootprint);
+        var centerAnchorOffset = GetFootprintCenterAnchorOffset(effectiveFootprint);
+
+        GetPlacementOffsets(out var cellOffset, out var worldRemainderOffset);
+        var placementCell = new Vector3Int(
+            cell.x + cellOffset.x - centerAnchorOffset.x,
+            0,
+            cell.z + cellOffset.z - centerAnchorOffset.z);
+
+        var footprintVisualOffset = GetFootprintVisualOffset(effectiveFootprint);
+        var canPlace = CanPlaceFootprint(placementCell, effectiveFootprint);
+
+        ghostPreviewCell = placementCell;
+        ghostPreviewFootprint = effectiveFootprint;
+        ghostPreviewCanPlace = canPlace;
+        hasGhostPreviewCells = true;
 
         if (!canPlace)
         {
@@ -412,10 +499,45 @@ public class GridSystem : MonoBehaviour
             return;
         }
 
-        ghostObject.transform.position = GetCellWorldPosition(cell);
+        ghostObject.transform.position = GetCellWorldPosition(placementCell) + footprintVisualOffset + worldRemainderOffset;
         ghostObject.transform.rotation = currentRotation;
         SetGhostVisible(true);
         ApplyGhostColor(GhostValidColor);
+    }
+
+    private Vector3 GetPlacementOffsetWorld()
+    {
+        return currentRotation * selectedPlacementOffset;
+    }
+
+    private void GetPlacementOffsets(out Vector3Int cellOffset, out Vector3 worldRemainderOffset)
+    {
+        var worldOffset = GetPlacementOffsetWorld();
+
+        var rightCells = Vector3.Dot(worldOffset, transform.right) / CellSize;
+        var forwardCells = Vector3.Dot(worldOffset, transform.forward) / CellSize;
+
+        var cellX = Mathf.RoundToInt(rightCells);
+        var cellZ = Mathf.RoundToInt(forwardCells);
+        cellOffset = new Vector3Int(cellX, 0, cellZ);
+
+        worldRemainderOffset = worldOffset
+            - transform.right * (cellX * CellSize)
+            - transform.forward * (cellZ * CellSize);
+    }
+
+    private Vector3 GetFootprintVisualOffset(Vector2Int footprint)
+    {
+        var size = NormalizeFootprint(footprint);
+        var rightOffset = (size.x - 1) * 0.5f * CellSize;
+        var forwardOffset = (size.y - 1) * 0.5f * CellSize;
+        return transform.right * rightOffset + transform.forward * forwardOffset;
+    }
+
+    private Vector3Int GetFootprintCenterAnchorOffset(Vector2Int footprint)
+    {
+        var size = NormalizeFootprint(footprint);
+        return new Vector3Int((size.x - 1) / 2, 0, (size.y - 1) / 2);
     }
 
     private void SetGhostVisible(bool isVisible)

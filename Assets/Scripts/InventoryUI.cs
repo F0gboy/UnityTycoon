@@ -191,6 +191,7 @@ public class InventoryUI : MonoBehaviour
             slotClick.ItemIndex = index;
             slotClick.Prefab = item.Prefab;
             slotClick.Footprint = item.Footprint;
+            slotClick.PlacementOffset = item.PlacementOffset;
             slotClick.ItemName = item.Name;
             slotClick.Icon = item.Icon;
             slotClick.Cost = item.Cost;
@@ -259,7 +260,7 @@ public class InventoryUI : MonoBehaviour
         Populate();
     }
 
-    public bool TryBuyItem(string name, Sprite icon, GameObject prefab, Vector2Int footprint, int cost)
+    public bool TryBuyItem(string name, Sprite icon, GameObject prefab, Vector2Int footprint, Vector3 placementOffset, int cost)
     {
         if (cost < 0)
         {
@@ -287,6 +288,7 @@ public class InventoryUI : MonoBehaviour
                 Icon = icon,
                 Prefab = prefab,
                 Footprint = footprint,
+                PlacementOffset = placementOffset,
                 Cost = cost,
                 Quantity = 1
             };
@@ -341,11 +343,27 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
+    public void SelectItem(int index, Vector2Int footprint, Vector3 placementOffset)
+    {
+        if (GridSystem != null)
+        {
+            GridSystem.SelectItem(index, footprint, placementOffset);
+        }
+    }
+
     public void SelectPrefab(GameObject prefab, Vector2Int footprint)
     {
         if (GridSystem != null)
         {
             GridSystem.SelectPrefab(prefab, footprint);
+        }
+    }
+
+    public void SelectPrefab(GameObject prefab, Vector2Int footprint, Vector3 placementOffset)
+    {
+        if (GridSystem != null)
+        {
+            GridSystem.SelectPrefab(prefab, footprint, placementOffset);
         }
     }
 
@@ -474,6 +492,7 @@ public class InventoryUI : MonoBehaviour
         public Sprite Icon;
         public GameObject Prefab;
         public Vector2Int Footprint = Vector2Int.one;
+        public Vector3 PlacementOffset = Vector3.zero;
         public int Cost;
         public int Quantity = 1;
     }
