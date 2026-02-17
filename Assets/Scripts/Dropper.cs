@@ -7,6 +7,7 @@ public class Dropper : MonoBehaviour
     public float DropInterval = 1.0f;
     public Transform DroppedParent;
     public Material GhostPreviewMaterial;
+    public float IdleDestroySeconds = 10f;
 
     private float nextDropTime;
 
@@ -31,5 +32,12 @@ public class Dropper : MonoBehaviour
         {
             instance.transform.SetParent(DroppedParent, worldPositionStays: true);
         }
+
+        var autoDestroy = instance.GetComponent<AutoDestroyOnNoMovement>();
+        if (autoDestroy == null)
+        {
+            autoDestroy = instance.AddComponent<AutoDestroyOnNoMovement>();
+        }
+        autoDestroy.IdleSeconds = IdleDestroySeconds;
     }
 }
