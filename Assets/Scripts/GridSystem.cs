@@ -31,6 +31,11 @@ public class GridSystem : MonoBehaviour
     public Color GhostCellColor = new Color(1f, 0.75f, 0f, 0.42f);
     public Color GhostCellBlockedColor = new Color(1f, 0f, 0f, 0.6f);
 
+    [Header("Build Hover Outline")]
+    public bool ShowPlacedObjectOutline = true;
+    public Color PlacedObjectOutlineColor = new Color(1f, 1f, 0f, 1f);
+    public float PlacedObjectOutlineWidth = 0.03f;
+
     [Header("Inventory / Placement Mode")]
     public KeyCode ToggleInventoryKey = KeyCode.F;
     public bool PlacementModeActive = false;
@@ -53,6 +58,9 @@ public class GridSystem : MonoBehaviour
     private Vector3Int ghostPreviewCell;
     private Vector2Int ghostPreviewFootprint = Vector2Int.one;
     private bool ghostPreviewCanPlace;
+    private Transform outlinedPlacedRoot;
+    private readonly List<LineRenderer> placedOutlineLines = new List<LineRenderer>();
+    private GameObject placedOutlineRoot;
 
     private void Update()
     {
@@ -66,8 +74,11 @@ public class GridSystem : MonoBehaviour
             SetGridVisible(false);
             SetGhostVisible(false);
             hasGhostPreviewCells = false;
+            ClearPlacedObjectOutline();
             return;
         }
+
+        UpdatePlacedObjectOutline();
 
         EnsureGridLines();
         UpdateGridLinePositions();
@@ -131,6 +142,203 @@ public class GridSystem : MonoBehaviour
 
         cell = new Vector3Int(cellX, 0, cellZ);
         return true;
+    }
+
+    private void UpdatePlacedObjectOutline()
+    {
+        if (!ShowPlacedObjectOutline || Camera.main == null)
+        {
+            ClearPlacedObjectOutline();
+            return;
+        }
+
+        var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (!Physics.Raycast(ray, out var hit, 500f))
+        {
+            ClearPlacedObjectOutline();
+            return;
+        }
+
+        var targetRoot = GetPlacedObjectRoot(hit.transform);
+        if (targetRoot == null)
+        {
+            ClearPlacedObjectOutline();
+            return;
+        }
+
+        if (!TryGetRenderBounds(targetRoot, out var bounds))
+        {
+            ClearPlacedObjectOutline();
+            return;
+        }
+
+        outlinedPlacedRoot = targetRoot;
+        EnsurePlacedOutlineLines();
+        UpdatePlacedOutlineLines(bounds);
+    }
+
+    private Transform GetPlacedObjectRoot(Transform hovered)
+    {
+        if (hovered == null)
+        {
+            return null;
+        }
+
+        if (hovered == transform || hovered.IsChildOf(transform))
+        {
+            return null;
+        }
+
+        var owningGrid = hovered.GetComponentInParent<GridSystem>();
+        if (owningGrid == this)
+        {
+            return null;
+        }
+
+        if (PlacedParent == null)
+        {
+            return hovered.root;
+        }
+
+        var current = hovered;
+        while (current != null)
+        {
+            if (current.parent == PlacedParent)
+            {
+                return current;
+            }
+
+            if (current == PlacedParent)
+            {
+                return null;
+            }
+
+            current = current.parent;
+        }
+
+        return null;
+    }
+
+    private bool TryGetRenderBounds(Transform root, out Bounds bounds)
+    {
+        bounds = default;
+        if (root == null)
+        {
+            return false;
+        }
+
+        var renderers = root.GetComponentsInChildren<Renderer>(true);
+        var found = false;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (!found)
+            {
+                bounds = renderers[i].bounds;
+                found = true;
+            }
+            else
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+        }
+
+        return found;
+    }
+
+    private void EnsurePlacedOutlineLines()
+    {
+        if (placedOutlineLines.Count == 12)
+        {
+            for (int i = 0; i < placedOutlineLines.Count; i++)
+            {
+                placedOutlineLines[i].enabled = true;
+                placedOutlineLines[i].startColor = PlacedObjectOutlineColor;
+                placedOutlineLines[i].endColor = PlacedObjectOutlineColor;
+                placedOutlineLines[i].startWidth = PlacedObjectOutlineWidth;
+                placedOutlineLines[i].endWidth = PlacedObjectOutlineWidth;
+            }
+            return;
+        }
+
+        if (placedOutlineRoot == null)
+        {
+            placedOutlineRoot = new GameObject("PlacedHoverOutline");
+            placedOutlineRoot.transform.SetParent(transform, worldPositionStays: true);
+        }
+
+        var lineMaterial = GridMaterial != null ? GridMaterial : new Material(Shader.Find("Sprites/Default"));
+        while (placedOutlineLines.Count < 12)
+        {
+            var lineObj = new GameObject("OutlineLine");
+            lineObj.transform.SetParent(placedOutlineRoot.transform, worldPositionStays: true);
+            var lr = lineObj.AddComponent<LineRenderer>();
+            lr.positionCount = 2;
+            lr.useWorldSpace = true;
+            lr.material = lineMaterial;
+            lr.startColor = PlacedObjectOutlineColor;
+            lr.endColor = PlacedObjectOutlineColor;
+            lr.startWidth = PlacedObjectOutlineWidth;
+            lr.endWidth = PlacedObjectOutlineWidth;
+            placedOutlineLines.Add(lr);
+        }
+    }
+
+    private void UpdatePlacedOutlineLines(Bounds bounds)
+    {
+        if (placedOutlineLines.Count < 12)
+        {
+            return;
+        }
+
+        var min = bounds.min;
+        var max = bounds.max;
+        var p000 = new Vector3(min.x, min.y, min.z);
+        var p001 = new Vector3(min.x, min.y, max.z);
+        var p010 = new Vector3(min.x, max.y, min.z);
+        var p011 = new Vector3(min.x, max.y, max.z);
+        var p100 = new Vector3(max.x, min.y, min.z);
+        var p101 = new Vector3(max.x, min.y, max.z);
+        var p110 = new Vector3(max.x, max.y, min.z);
+        var p111 = new Vector3(max.x, max.y, max.z);
+
+        SetLine(0, p000, p001);
+        SetLine(1, p001, p101);
+        SetLine(2, p101, p100);
+        SetLine(3, p100, p000);
+
+        SetLine(4, p010, p011);
+        SetLine(5, p011, p111);
+        SetLine(6, p111, p110);
+        SetLine(7, p110, p010);
+
+        SetLine(8, p000, p010);
+        SetLine(9, p001, p011);
+        SetLine(10, p101, p111);
+        SetLine(11, p100, p110);
+    }
+
+    private void SetLine(int index, Vector3 start, Vector3 end)
+    {
+        if (index < 0 || index >= placedOutlineLines.Count || placedOutlineLines[index] == null)
+        {
+            return;
+        }
+
+        placedOutlineLines[index].enabled = true;
+        placedOutlineLines[index].SetPosition(0, start);
+        placedOutlineLines[index].SetPosition(1, end);
+    }
+
+    private void ClearPlacedObjectOutline()
+    {
+        outlinedPlacedRoot = null;
+        for (int i = 0; i < placedOutlineLines.Count; i++)
+        {
+            if (placedOutlineLines[i] != null)
+            {
+                placedOutlineLines[i].enabled = false;
+            }
+        }
     }
 
     private void TryPlaceAtCell(Vector3Int cell)
