@@ -1211,15 +1211,20 @@ MonoBehaviour:
   RotateWithQAndE: 1
   RotateWithR: 1
   RRotationStep: 90
-  PlacedParent: {fileID: 0}
+  PlacedParent: {fileID: 947061020}
   ShowGhost: 1
   GhostMaterial: {fileID: 2100000, guid: 3f17a296b8abcc043ba1793ac093556a, type: 2}
   GhostValidColor: {r: 0, g: 1, b: 0, a: 0.4}
   GhostBlockedColor: {r: 1, g: 0, b: 0, a: 0.4}
   GhostAlpha: 0.35
   ShowDebugCellOverlay: 1
+  ShowOccupiedCellsInGameView: 1
+  OccupiedCellColor: {r: 1, g: 0, b: 0, a: 0.35}
   GhostCellColor: {r: 1, g: 0, b: 0, a: 0.42}
   GhostCellBlockedColor: {r: 1, g: 0, b: 0, a: 0.6}
+  ShowPlacedObjectOutline: 1
+  PlacedObjectOutlineColor: {r: 1, g: 1, b: 0, a: 1}
+  PlacedObjectOutlineWidth: 0.03
   ToggleInventoryKey: 102
   PlacementModeActive: 0
   SelectedIndex: 0
@@ -1855,6 +1860,13 @@ MonoBehaviour:
     Prefab: {fileID: 9061606983911019492, guid: fb96c456b8304094cb8cf4116cebf29f, type: 3}
     Footprint: {x: 5, y: 3}
     PlacementOffset: {x: 1, y: 0, z: 0}
+    Cost: 100
+    Quantity: 1
+  - Name: Selling Pit
+    Icon: {fileID: 0}
+    Prefab: {fileID: 7306060856212608626, guid: e0972c6772ddff04b9c77d5453a3bbb0, type: 3}
+    Footprint: {x: 3, y: 3}
+    PlacementOffset: {x: 0, y: 0, z: 0}
     Cost: 100
     Quantity: 1
   StartingCoins: 500

@@ -28,6 +28,8 @@ public class GridSystem : MonoBehaviour
 
     [Header("Debug Cell Overlay")]
     public bool ShowDebugCellOverlay = true;
+    public bool ShowOccupiedCellsInGameView = true;
+    public Color OccupiedCellColor = new Color(1f, 0f, 0f, 0.35f);
     public Color GhostCellColor = new Color(1f, 0.75f, 0f, 0.42f);
     public Color GhostCellBlockedColor = new Color(1f, 0f, 0f, 0.6f);
 
@@ -61,6 +63,9 @@ public class GridSystem : MonoBehaviour
     private Transform outlinedPlacedRoot;
     private readonly List<LineRenderer> placedOutlineLines = new List<LineRenderer>();
     private GameObject placedOutlineRoot;
+    private readonly List<GameObject> occupiedCellVisuals = new List<GameObject>();
+    private GameObject occupiedCellVisualRoot;
+    private Material occupiedCellVisualMaterial;
 
     private void Update()
     {
@@ -75,6 +80,7 @@ public class GridSystem : MonoBehaviour
             SetGhostVisible(false);
             hasGhostPreviewCells = false;
             ClearPlacedObjectOutline();
+            SetOccupiedCellVisualsVisible(false);
             return;
         }
 
@@ -83,6 +89,7 @@ public class GridSystem : MonoBehaviour
         EnsureGridLines();
         UpdateGridLinePositions();
         SetGridVisible(true);
+        UpdateOccupiedCellVisuals();
 
         if (RotateWithQAndE)
         {
@@ -101,12 +108,22 @@ public class GridSystem : MonoBehaviour
             currentRotation *= Quaternion.Euler(0f, RRotationStep, 0f);
         }
 
+        var hasPlacementSelection = GetSelectedPrefab() != null;
+
         if (TryGetHoveredCell(out hoveredCell))
         {
             UpdateGhost(hoveredCell);
             if (Input.GetMouseButtonDown(0))
             {
-                TryPlaceAtCell(hoveredCell);
+                if (!hasPlacementSelection)
+                {
+                    return;
+                }
+
+                if (hasPlacementSelection)
+                {
+                    TryPlaceAtCell(hoveredCell);
+                }
             }
         }
         else
@@ -184,19 +201,19 @@ public class GridSystem : MonoBehaviour
             return null;
         }
 
-        if (hovered == transform || hovered.IsChildOf(transform))
-        {
-            return null;
-        }
-
-        var owningGrid = hovered.GetComponentInParent<GridSystem>();
-        if (owningGrid == this)
-        {
-            return null;
-        }
-
         if (PlacedParent == null)
         {
+            if (hovered == transform)
+            {
+                return null;
+            }
+
+            var owningGrid = hovered.GetComponentInParent<GridSystem>();
+            if (owningGrid == this)
+            {
+                return null;
+            }
+
             return hovered.root;
         }
 
@@ -370,6 +387,7 @@ public class GridSystem : MonoBehaviour
         {
             instance.transform.SetParent(PlacedParent, worldPositionStays: true);
         }
+
         ItemPlaced?.Invoke(prefab);
         MarkFootprintOccupied(placementCell, effectiveFootprint);
     }
@@ -530,6 +548,96 @@ public class GridSystem : MonoBehaviour
                 Gizmos.color = blocked ? GhostCellBlockedColor : GhostCellColor;
                 Gizmos.DrawCube(GetCellWorldPosition(c), cellVisualSize);
             }
+        }
+    }
+
+    private void UpdateOccupiedCellVisuals()
+    {
+        if (!ShowDebugCellOverlay || !ShowOccupiedCellsInGameView)
+        {
+            SetOccupiedCellVisualsVisible(false);
+            return;
+        }
+
+        EnsureOccupiedCellVisualRoot();
+        EnsureOccupiedCellVisualMaterial();
+        SetOccupiedCellVisualsVisible(true);
+
+        var needed = occupiedCells.Count;
+        while (occupiedCellVisuals.Count < needed)
+        {
+            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quad.name = "OccupiedCellVisual";
+            quad.transform.SetParent(occupiedCellVisualRoot.transform, worldPositionStays: true);
+
+            var col = quad.GetComponent<Collider>();
+            if (col != null)
+            {
+                Destroy(col);
+            }
+
+            var renderer = quad.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.material = occupiedCellVisualMaterial;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            occupiedCellVisuals.Add(quad);
+        }
+
+        var rotation = Quaternion.LookRotation(transform.up, transform.forward);
+        var scale = new Vector3(CellSize * 0.9f, CellSize * 0.9f, 1f);
+        var index = 0;
+        foreach (var cell in occupiedCells)
+        {
+            var visual = occupiedCellVisuals[index++];
+            visual.SetActive(true);
+            visual.transform.position = GetCellWorldPosition(cell) + transform.up * 0.005f;
+            visual.transform.rotation = rotation;
+            visual.transform.localScale = scale;
+
+            var renderer = visual.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.material.color = OccupiedCellColor;
+            }
+        }
+
+        for (int i = index; i < occupiedCellVisuals.Count; i++)
+        {
+            occupiedCellVisuals[i].SetActive(false);
+        }
+    }
+
+    private void EnsureOccupiedCellVisualRoot()
+    {
+        if (occupiedCellVisualRoot != null)
+        {
+            return;
+        }
+
+        occupiedCellVisualRoot = new GameObject("OccupiedCellOverlay");
+        occupiedCellVisualRoot.transform.SetParent(transform, worldPositionStays: true);
+    }
+
+    private void EnsureOccupiedCellVisualMaterial()
+    {
+        if (occupiedCellVisualMaterial != null)
+        {
+            return;
+        }
+
+        occupiedCellVisualMaterial = new Material(Shader.Find("Sprites/Default"));
+        occupiedCellVisualMaterial.color = OccupiedCellColor;
+    }
+
+    private void SetOccupiedCellVisualsVisible(bool visible)
+    {
+        if (occupiedCellVisualRoot != null)
+        {
+            occupiedCellVisualRoot.SetActive(visible);
         }
     }
 

@@ -318,6 +318,7 @@ public class InventoryUI : MonoBehaviour
         return true;
     }
 
+
     private void UpdateCoinsText()
     {
         if (CoinsTextTMP != null)
