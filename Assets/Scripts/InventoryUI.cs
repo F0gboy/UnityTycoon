@@ -5,6 +5,8 @@ using TMPro;
 
 public class InventoryUI : MonoBehaviour
 {
+    public static InventoryUI Instance { get; private set; }
+
     [Header("UI References")]
     public RectTransform InventoryPanel;
     public RectTransform ContentRoot;
@@ -50,6 +52,7 @@ public class InventoryUI : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
         EnsureNoGridLayout();
         HookTabButtons();
         coins = StartingCoins;
@@ -57,6 +60,14 @@ public class InventoryUI : MonoBehaviour
         HookGridEvents();
         Populate();
         SetVisible(false, instant: true);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     private void Update()
@@ -256,7 +267,11 @@ public class InventoryUI : MonoBehaviour
     public void ShowStoreTab()
     {
         showingStore = true;
-        selectedSlot = null;
+        SetSelectedSlot(null);
+        if (GridSystem != null)
+        {
+            GridSystem.ClearSelection();
+        }
         Populate();
     }
 
@@ -294,6 +309,12 @@ public class InventoryUI : MonoBehaviour
             };
             Items.Add(newItem);
         }
+
+        SetSelectedSlot(null);
+        if (GridSystem != null)
+        {
+            GridSystem.ClearSelection();
+        }
         return true;
     }
 
@@ -303,6 +324,17 @@ public class InventoryUI : MonoBehaviour
         {
             CoinsTextTMP.text = coins.ToString();
         }
+    }
+
+    public void AddCoins(int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        coins += amount;
+        UpdateCoinsText();
     }
 
     public void SetSelectedSlot(InventoryItemSlot slot)

@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
     public InventoryUI Inventory;
     public int ItemIndex;
@@ -41,16 +41,19 @@ public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerEx
 
     private void HookButtons()
     {
+        var buttons = GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            buttons[i].onClick.RemoveListener(OnBuyClicked);
+            buttons[i].onClick.RemoveListener(OnSelectClicked);
+        }
+
         if (IsStoreItem)
         {
-            if (BuyButton == null)
-            {
-                BuyButton = FindButtonByName("BuyButton");
-            }
+            BuyButton = FindButtonByName("BuyButton");
 
             if (BuyButton != null)
             {
-                BuyButton.onClick.RemoveListener(OnBuyClicked);
                 BuyButton.onClick.AddListener(OnBuyClicked);
                 var image = BuyButton.GetComponent<Image>();
                 if (image != null)
@@ -61,14 +64,10 @@ public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerEx
             return;
         }
 
-        if (SelectButton == null)
-        {
-            SelectButton = FindButtonByName("SelectButton");
-        }
+        SelectButton = FindButtonByName("SelectButton");
 
         if (SelectButton != null)
         {
-            SelectButton.onClick.RemoveListener(OnSelectClicked);
             SelectButton.onClick.AddListener(OnSelectClicked);
         }
     }
@@ -124,6 +123,16 @@ public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerEx
     {
         isHovered = false;
         UpdateOutline();
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (IsStoreItem || eventData.button != PointerEventData.InputButton.Left)
+        {
+            return;
+        }
+
+        OnSelectClicked();
     }
 
     public void SetSelected(bool selected)

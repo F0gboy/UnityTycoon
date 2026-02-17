@@ -1178,7 +1178,7 @@ Transform:
   m_GameObject: {fileID: 947061016}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.08, z: 10.07}
+  m_LocalPosition: {x: 0, y: 0.08, z: 11.0432}
   m_LocalScale: {x: 20, y: 0.2, z: 20}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1218,7 +1218,6 @@ MonoBehaviour:
   GhostBlockedColor: {r: 1, g: 0, b: 0, a: 0.4}
   GhostAlpha: 0.35
   ShowDebugCellOverlay: 1
-  OccupiedCellColor: {r: 1, g: 0, b: 0, a: 0.28}
   GhostCellColor: {r: 1, g: 0, b: 0, a: 0.42}
   GhostCellBlockedColor: {r: 1, g: 0, b: 0, a: 0.6}
   ToggleInventoryKey: 102
