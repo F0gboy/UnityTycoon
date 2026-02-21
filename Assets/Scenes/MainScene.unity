@@ -1853,14 +1853,14 @@ MonoBehaviour:
     Prefab: {fileID: 5785298354766236308, guid: dc81d9595d6dc064495a3ff58682afaf, type: 3}
     Footprint: {x: 3, y: 3}
     PlacementOffset: {x: 0, y: 0, z: 0}
-    Cost: 100
+    Cost: 35
     Quantity: 1
   - Name: Basic Conveyor
     Icon: {fileID: 0}
     Prefab: {fileID: 9061606983911019492, guid: fb96c456b8304094cb8cf4116cebf29f, type: 3}
     Footprint: {x: 5, y: 3}
     PlacementOffset: {x: 1, y: 0, z: 0}
-    Cost: 100
+    Cost: 15
     Quantity: 1
   - Name: Selling Pit
     Icon: {fileID: 0}
@@ -1869,7 +1869,14 @@ MonoBehaviour:
     PlacementOffset: {x: 0, y: 0, z: 0}
     Cost: 100
     Quantity: 1
-  StartingCoins: 500
+  - Name: Big Dropper
+    Icon: {fileID: 0}
+    Prefab: {fileID: 5785298354766236308, guid: 24c88c4136078724dbb86534170b2312, type: 3}
+    Footprint: {x: 3, y: 3}
+    PlacementOffset: {x: 0, y: 0, z: 0}
+    Cost: 300
+    Quantity: 1
+  StartingCoins: 150
   CoinsTextTMP: {fileID: 482880758}
   ToggleKey: 102
   KeepCursorUnlockedWhileVisible: 1

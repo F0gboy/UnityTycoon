@@ -3,8 +3,16 @@ using UnityEngine;
 [RequireComponent(typeof(Collider))]
 public class SellingPit : MonoBehaviour
 {
+    [System.Serializable]
+    public class TypeSellValue
+    {
+        public string TypeId;
+        public int Coins = 1;
+    }
+
     [Header("Sell Settings")]
     public int DefaultSellValue = 1;
+    public TypeSellValue[] TypeSellValues;
     public LayerMask AffectedLayers = ~0;
     public string RequiredTag = "";
     public bool UseTrigger = true;
@@ -77,10 +85,42 @@ public class SellingPit : MonoBehaviour
         var sellValue = target.GetComponentInChildren<SellValue>(true);
         if (sellValue != null)
         {
+            if (TryGetTypeSellValue(sellValue.TypeId, out int typeCoins))
+            {
+                return Mathf.Max(0, typeCoins);
+            }
+
             return Mathf.Max(0, sellValue.Coins);
         }
 
         return Mathf.Max(0, DefaultSellValue);
+    }
+
+    private bool TryGetTypeSellValue(string typeId, out int coins)
+    {
+        coins = 0;
+
+        if (string.IsNullOrWhiteSpace(typeId) || TypeSellValues == null || TypeSellValues.Length == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < TypeSellValues.Length; i++)
+        {
+            var entry = TypeSellValues[i];
+            if (entry == null || string.IsNullOrWhiteSpace(entry.TypeId))
+            {
+                continue;
+            }
+
+            if (string.Equals(entry.TypeId, typeId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                coins = entry.Coins;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool IsAffected(Collider other)
