@@ -701,6 +701,62 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &725826820
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 725826822}
+  - component: {fileID: 725826821}
+  m_Layer: 0
+  m_Name: ManagerObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &725826821
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 725826820}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d73179bc7ea610648b604a363516c177, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectInteractionController
+  GridSystem: {fileID: 947061021}
+  Inventory: {fileID: 1448579039}
+  InteractionCamera: {fileID: 2086326535}
+  SelectionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  BlockSelectionWhenPointerOverUI: 0
+  WorldActionPanelPrefab: {fileID: 5849336094181399695, guid: 333c2089099378e41be5c1d63dfd3d51, type: 3}
+  PanelOffset: {x: 0, y: 2, z: 0}
+  DistanceTowardsPlayer: 3
+  FaceCamera: 1
+  WorldPanelScale: {x: 0.01, y: 0.01, z: 0.01}
+--- !u!4 &725826822
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 725826820}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.90149, y: 0.18, z: 11.7452}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &731852408
 GameObject:
   m_ObjectHideFlags: 0
@@ -2858,3 +2914,4 @@ SceneRoots:
   - {fileID: 680972716}
   - {fileID: 1448579038}
   - {fileID: 947061020}
+  - {fileID: 725826822}

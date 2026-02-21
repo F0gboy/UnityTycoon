@@ -44,6 +44,7 @@ public class GridSystem : MonoBehaviour
     public int SelectedIndex = 0;
     public bool UseInputToggle = true;
     public System.Action<GameObject> ItemPlaced;
+    public bool IsMovingPlacedObject => isMovingPlacedObject;
 
     private readonly HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int>();
     private Vector3Int hoveredCell;
@@ -66,6 +67,14 @@ public class GridSystem : MonoBehaviour
     private readonly List<GameObject> occupiedCellVisuals = new List<GameObject>();
     private GameObject occupiedCellVisualRoot;
     private Material occupiedCellVisualMaterial;
+    private bool isMovingPlacedObject;
+    private GameObject movingPlacedObject;
+    private Vector3Int movingOriginalCell;
+    private Vector2Int movingOriginalFootprint = Vector2Int.one;
+    private Vector3 movingOriginalPosition;
+    private Quaternion movingOriginalRotation = Quaternion.identity;
+    private Transform movingOriginalParent;
+    private int ignorePlacementClickUntilFrame;
 
     private void Update()
     {
@@ -76,6 +85,11 @@ public class GridSystem : MonoBehaviour
 
         if (!PlacementModeActive)
         {
+            if (isMovingPlacedObject)
+            {
+                CancelMovePlacedObject();
+            }
+
             SetGridVisible(false);
             SetGhostVisible(false);
             hasGhostPreviewCells = false;
@@ -108,6 +122,12 @@ public class GridSystem : MonoBehaviour
             currentRotation *= Quaternion.Euler(0f, RRotationStep, 0f);
         }
 
+        if (isMovingPlacedObject && (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1)))
+        {
+            CancelMovePlacedObject();
+            return;
+        }
+
         var hasPlacementSelection = GetSelectedPrefab() != null;
 
         if (TryGetHoveredCell(out hoveredCell))
@@ -115,6 +135,16 @@ public class GridSystem : MonoBehaviour
             UpdateGhost(hoveredCell);
             if (Input.GetMouseButtonDown(0))
             {
+                if (Time.frameCount <= ignorePlacementClickUntilFrame)
+                {
+                    return;
+                }
+
+                if (TryGetClickedPlacedObject(out var _))
+                {
+                    return;
+                }
+
                 if (!hasPlacementSelection)
                 {
                     return;
@@ -382,14 +412,124 @@ public class GridSystem : MonoBehaviour
 
         var footprintVisualOffset = GetFootprintVisualOffset(effectiveFootprint);
         var worldPos = GetCellWorldPosition(placementCell) + footprintVisualOffset + worldRemainderOffset;
-        var instance = Instantiate(prefab, worldPos, currentRotation);
-        if (PlacedParent != null)
+        GameObject instance;
+        if (isMovingPlacedObject && movingPlacedObject != null)
         {
-            instance.transform.SetParent(PlacedParent, worldPositionStays: true);
+            instance = movingPlacedObject;
+            var parent = PlacedParent != null ? PlacedParent : movingOriginalParent;
+            if (parent != null)
+            {
+                instance.transform.SetParent(parent, worldPositionStays: true);
+            }
+
+            instance.transform.position = worldPos;
+            instance.transform.rotation = currentRotation;
+            instance.SetActive(true);
+        }
+        else
+        {
+            instance = Instantiate(prefab, worldPos, currentRotation);
+            if (PlacedParent != null)
+            {
+                instance.transform.SetParent(PlacedParent, worldPositionStays: true);
+            }
+
+            ItemPlaced?.Invoke(prefab);
         }
 
-        ItemPlaced?.Invoke(prefab);
         MarkFootprintOccupied(placementCell, effectiveFootprint);
+        RegisterPlacedObject(instance, prefab, placementCell, effectiveFootprint, selectedFootprint, selectedPlacementOffset);
+
+        if (isMovingPlacedObject)
+        {
+            ClearMoveState();
+            ClearSelection();
+        }
+    }
+
+    public bool TryGetPlacedObjectData(GameObject placedObject, out PlaceableObjectData data)
+    {
+        return TryGetPlaceableInstanceData(placedObject, out data);
+    }
+
+    public GameObject GetPlacedObjectRootFromHit(Transform hovered)
+    {
+        var root = GetPlacedObjectRoot(hovered);
+        return root != null ? root.gameObject : null;
+    }
+
+    public bool BeginMovePlacedObject(GameObject placedObject)
+    {
+        if (!TryGetPlaceableInstanceData(placedObject, out var data))
+        {
+            return false;
+        }
+
+        if (isMovingPlacedObject)
+        {
+            CancelMovePlacedObject();
+        }
+
+        movingPlacedObject = data.gameObject;
+        movingOriginalCell = data.OccupiedCell;
+        movingOriginalFootprint = NormalizeFootprint(data.OccupiedFootprint);
+        movingOriginalPosition = movingPlacedObject.transform.position;
+        movingOriginalRotation = movingPlacedObject.transform.rotation;
+        movingOriginalParent = movingPlacedObject.transform.parent;
+
+        UnmarkFootprintOccupied(movingOriginalCell, movingOriginalFootprint);
+        movingPlacedObject.SetActive(false);
+
+        isMovingPlacedObject = true;
+        ignorePlacementClickUntilFrame = Time.frameCount + 1;
+        currentRotation = Quaternion.Euler(0f, Mathf.Round(movingOriginalRotation.eulerAngles.y / 90f) * 90f, 0f);
+        selectedPrefabOverride = data.SourcePrefab != null ? data.SourcePrefab : movingPlacedObject;
+        selectedFootprint = NormalizeFootprint(data.BaseFootprint);
+        selectedPlacementOffset = data.PlacementOffset;
+        PlacementModeActive = true;
+        RefreshGhost();
+        return true;
+    }
+
+    public void CancelMovePlacedObject()
+    {
+        if (!isMovingPlacedObject)
+        {
+            return;
+        }
+
+        if (movingPlacedObject != null)
+        {
+            if (movingOriginalParent != null)
+            {
+                movingPlacedObject.transform.SetParent(movingOriginalParent, worldPositionStays: true);
+            }
+
+            movingPlacedObject.transform.position = movingOriginalPosition;
+            movingPlacedObject.transform.rotation = movingOriginalRotation;
+            movingPlacedObject.SetActive(true);
+            MarkFootprintOccupied(movingOriginalCell, movingOriginalFootprint);
+        }
+
+        ClearMoveState();
+        ClearSelection();
+    }
+
+    public bool RemovePlacedObject(GameObject placedObject)
+    {
+        if (!TryGetPlaceableInstanceData(placedObject, out var data))
+        {
+            return false;
+        }
+
+        if (isMovingPlacedObject && movingPlacedObject == data.gameObject)
+        {
+            ClearMoveState();
+        }
+
+        UnmarkFootprintOccupied(data.OccupiedCell, data.OccupiedFootprint);
+        Destroy(data.gameObject);
+        return true;
     }
 
     public void SelectItem(int index)
@@ -1001,6 +1141,167 @@ public class GridSystem : MonoBehaviour
                 occupiedCells.Add(new Vector3Int(cell.x + x, 0, cell.z + z));
             }
         }
+    }
+
+    private void UnmarkFootprintOccupied(Vector3Int cell, Vector2Int footprint)
+    {
+        var size = NormalizeFootprint(footprint);
+        for (int x = 0; x < size.x; x++)
+        {
+            for (int z = 0; z < size.y; z++)
+            {
+                occupiedCells.Remove(new Vector3Int(cell.x + x, 0, cell.z + z));
+            }
+        }
+    }
+
+    private bool TryGetClickedPlacedObject(out GameObject placedObject)
+    {
+        placedObject = null;
+        if (Camera.main == null)
+        {
+            return false;
+        }
+
+        var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        var hits = Physics.RaycastAll(ray, 600f);
+        if (hits == null || hits.Length == 0)
+        {
+            return false;
+        }
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            var root = GetPlacedObjectRoot(hits[i].transform);
+            if (root == null)
+            {
+                continue;
+            }
+
+            placedObject = root.gameObject;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void RegisterPlacedObject(
+        GameObject placedObject,
+        GameObject sourcePrefab,
+        Vector3Int occupiedCell,
+        Vector2Int occupiedFootprint,
+        Vector2Int baseFootprint,
+        Vector3 placementOffset)
+    {
+        if (placedObject == null)
+        {
+            return;
+        }
+
+        var data = placedObject.GetComponent<PlaceableObjectData>();
+        if (data == null)
+        {
+            data = placedObject.AddComponent<PlaceableObjectData>();
+        }
+
+        data.SourcePrefab = sourcePrefab;
+        data.BaseFootprint = NormalizeFootprint(baseFootprint);
+        data.PlacementOffset = placementOffset;
+        data.DisplayName = sourcePrefab != null ? sourcePrefab.name : placedObject.name;
+        data.SetPlacementData(occupiedCell, NormalizeFootprint(occupiedFootprint));
+    }
+
+    private bool TryGetPlaceableInstanceData(GameObject placedObject, out PlaceableObjectData data)
+    {
+        data = null;
+        if (placedObject == null)
+        {
+            return false;
+        }
+
+        data = placedObject.GetComponent<PlaceableObjectData>();
+        if (data == null)
+        {
+            data = placedObject.GetComponentInParent<PlaceableObjectData>();
+        }
+
+        if (data == null)
+        {
+            data = placedObject.AddComponent<PlaceableObjectData>();
+            var guessedPrefab = GuessSourcePrefab(placedObject);
+            var guessedCell = GetNearestCellFromWorldPosition(placedObject.transform.position);
+            data.SourcePrefab = guessedPrefab;
+            data.DisplayName = guessedPrefab != null ? guessedPrefab.name : placedObject.name;
+            data.BaseFootprint = Vector2Int.one;
+            data.PlacementOffset = Vector3.zero;
+            data.SetPlacementData(guessedCell, Vector2Int.one);
+            RegisterPlacedObject(
+                placedObject,
+                data.SourcePrefab,
+                data.OccupiedCell,
+                data.OccupiedFootprint,
+                data.BaseFootprint,
+                data.PlacementOffset);
+        }
+
+        if (PlacedParent != null && !data.transform.IsChildOf(PlacedParent))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private GameObject GuessSourcePrefab(GameObject placedObject)
+    {
+        if (placedObject == null)
+        {
+            return null;
+        }
+
+        var candidateName = placedObject.name.Replace("(Clone)", "").Trim();
+        if (PlaceablePrefabs != null)
+        {
+            for (int i = 0; i < PlaceablePrefabs.Count; i++)
+            {
+                var prefab = PlaceablePrefabs[i];
+                if (prefab != null && prefab.name == candidateName)
+                {
+                    return prefab;
+                }
+            }
+        }
+
+        if (ObjectToPlace != null && ObjectToPlace.name == candidateName)
+        {
+            return ObjectToPlace;
+        }
+
+        return null;
+    }
+
+    private Vector3Int GetNearestCellFromWorldPosition(Vector3 worldPosition)
+    {
+        var origin = GetGridOrigin();
+        var toWorld = worldPosition - origin;
+        var x = Mathf.RoundToInt(Vector3.Dot(toWorld, transform.right) / CellSize - 0.5f);
+        var z = Mathf.RoundToInt(Vector3.Dot(toWorld, transform.forward) / CellSize - 0.5f);
+        x = Mathf.Clamp(x, 0, Mathf.Max(0, GridSize.x - 1));
+        z = Mathf.Clamp(z, 0, Mathf.Max(0, GridSize.y - 1));
+        return new Vector3Int(x, 0, z);
+    }
+
+    private void ClearMoveState()
+    {
+        isMovingPlacedObject = false;
+        movingPlacedObject = null;
+        movingOriginalCell = default;
+        movingOriginalFootprint = Vector2Int.one;
+        movingOriginalPosition = Vector3.zero;
+        movingOriginalRotation = Quaternion.identity;
+        movingOriginalParent = null;
     }
 
     private bool IsFootprintWithinBounds(Vector3Int cell, Vector2Int footprint)

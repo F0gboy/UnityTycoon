@@ -338,6 +338,64 @@ public class InventoryUI : MonoBehaviour
         UpdateCoinsText();
     }
 
+    public bool TryGetCostForPrefab(GameObject prefab, out int cost)
+    {
+        cost = 0;
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        var storeItem = FindStoreItemByPrefab(prefab);
+        if (storeItem != null)
+        {
+            cost = Mathf.Max(0, storeItem.Cost);
+            return true;
+        }
+
+        var inventoryItem = FindItemByPrefab(prefab);
+        if (inventoryItem != null)
+        {
+            cost = Mathf.Max(0, inventoryItem.Cost);
+            return true;
+        }
+
+        return false;
+    }
+
+    public void AddItemFromWorld(GameObject prefab, Vector2Int footprint, Vector3 placementOffset, string displayName = null)
+    {
+        if (prefab == null)
+        {
+            return;
+        }
+
+        var existing = FindItemByPrefab(prefab);
+        if (existing != null)
+        {
+            existing.Quantity += 1;
+            Populate();
+            return;
+        }
+
+        var storeItem = FindStoreItemByPrefab(prefab);
+        var item = new InventoryItem
+        {
+            Name = !string.IsNullOrWhiteSpace(displayName)
+                ? displayName
+                : (storeItem != null ? storeItem.Name : prefab.name),
+            Icon = storeItem != null ? storeItem.Icon : null,
+            Prefab = prefab,
+            Footprint = footprint,
+            PlacementOffset = placementOffset,
+            Cost = storeItem != null ? storeItem.Cost : 0,
+            Quantity = 1
+        };
+
+        Items.Add(item);
+        Populate();
+    }
+
     public void SetSelectedSlot(InventoryItemSlot slot)
     {
         if (selectedSlot != null && selectedSlot != slot)
@@ -493,6 +551,18 @@ public class InventoryUI : MonoBehaviour
             if (Items[i].Prefab == prefab)
             {
                 return Items[i];
+            }
+        }
+        return null;
+    }
+
+    private InventoryItem FindStoreItemByPrefab(GameObject prefab)
+    {
+        for (int i = 0; i < StoreItems.Count; i++)
+        {
+            if (StoreItems[i].Prefab == prefab)
+            {
+                return StoreItems[i];
             }
         }
         return null;
