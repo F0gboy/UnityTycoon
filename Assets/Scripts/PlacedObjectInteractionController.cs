@@ -68,6 +68,12 @@ public class PlacedObjectInteractionController : MonoBehaviour
             return;
         }
 
+        if (GridSystem.HasPlacementSelection)
+        {
+            ClearSelection();
+            return;
+        }
+
         if (!Input.GetMouseButtonDown(0))
         {
             return;

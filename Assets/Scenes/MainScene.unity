@@ -742,6 +742,10 @@ MonoBehaviour:
   DistanceTowardsPlayer: 3
   FaceCamera: 1
   WorldPanelScale: {x: 0.01, y: 0.01, z: 0.01}
+  SellRefundPercent: 0.2
+  EnableManualButtonFallback: 1
+  HoverOutlineColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  HoverOutlineDistance: {x: 3, y: 3}
 --- !u!4 &725826822
 Transform:
   m_ObjectHideFlags: 0
@@ -1932,7 +1936,14 @@ MonoBehaviour:
     PlacementOffset: {x: 0, y: 0, z: 0}
     Cost: 300
     Quantity: 1
-  StartingCoins: 150
+  - Name: Basic Upgrader
+    Icon: {fileID: 0}
+    Prefab: {fileID: 4664020713463211675, guid: 6d12c90cbeba3854fb345ea35a9967db, type: 3}
+    Footprint: {x: 1, y: 5}
+    PlacementOffset: {x: 0, y: 0, z: 0}
+    Cost: 100
+    Quantity: 1
+  StartingCoins: 250
   CoinsTextTMP: {fileID: 482880758}
   ToggleKey: 102
   KeepCursorUnlockedWhileVisible: 1

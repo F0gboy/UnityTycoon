@@ -87,7 +87,7 @@ public class SellingPit : MonoBehaviour
         {
             if (TryGetTypeSellValue(sellValue.TypeId, out int typeCoins))
             {
-                return Mathf.Max(0, typeCoins);
+                return Mathf.Max(0, Mathf.Max(typeCoins, sellValue.Coins));
             }
 
             return Mathf.Max(0, sellValue.Coins);

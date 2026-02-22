@@ -18,6 +18,10 @@ public class ConveyorBelt : MonoBehaviour
     public LayerMask AffectedLayers = ~0;
     public string RequiredTag = "";
 
+    [Header("Upgrader Snap")]
+    public Transform UpgraderSnapPoint;
+    public float UpgraderSlotCheckRadius = 0.2f;
+
     private Collider beltTrigger;
 
     private void Awake()
@@ -159,5 +163,35 @@ public class ConveyorBelt : MonoBehaviour
         }
 
         return true;
+    }
+
+    public bool IsUpgraderSlotFilled(ValueUpgrader requester = null)
+    {
+        if (UpgraderSnapPoint == null)
+        {
+            return false;
+        }
+
+        var hits = Physics.OverlapSphere(
+            UpgraderSnapPoint.position,
+            Mathf.Max(0.01f, UpgraderSlotCheckRadius));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            var upgrader = hits[i].GetComponentInParent<ValueUpgrader>();
+            if (upgrader == null)
+            {
+                continue;
+            }
+
+            if (requester != null && upgrader == requester)
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 }

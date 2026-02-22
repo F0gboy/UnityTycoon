@@ -45,6 +45,7 @@ public class GridSystem : MonoBehaviour
     public bool UseInputToggle = true;
     public System.Action<GameObject> ItemPlaced;
     public bool IsMovingPlacedObject => isMovingPlacedObject;
+    public bool HasPlacementSelection => GetSelectedPrefab() != null;
 
     private readonly HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int>();
     private Vector3Int hoveredCell;
@@ -140,7 +141,7 @@ public class GridSystem : MonoBehaviour
                     return;
                 }
 
-                if (TryGetClickedPlacedObject(out var _))
+                if (!hasPlacementSelection && TryGetClickedPlacedObject(out var _))
                 {
                     return;
                 }
@@ -405,13 +406,21 @@ public class GridSystem : MonoBehaviour
             0,
             cell.z + cellOffset.z - centerAnchorOffset.z);
 
-        if (!CanPlaceFootprint(placementCell, effectiveFootprint))
+        var ignoreOccupiedCells = ShouldIgnoreOccupiedCellsForPrefab(prefab);
+
+        if (!CanPlaceFootprint(placementCell, effectiveFootprint, ignoreOccupiedCells))
         {
             return;
         }
 
         var footprintVisualOffset = GetFootprintVisualOffset(effectiveFootprint);
         var worldPos = GetCellWorldPosition(placementCell) + footprintVisualOffset + worldRemainderOffset;
+        var worldRot = currentRotation;
+        if (!ApplySpecialPlacementPose(prefab, ref worldPos, ref worldRot))
+        {
+            return;
+        }
+
         GameObject instance;
         if (isMovingPlacedObject && movingPlacedObject != null)
         {
@@ -423,12 +432,12 @@ public class GridSystem : MonoBehaviour
             }
 
             instance.transform.position = worldPos;
-            instance.transform.rotation = currentRotation;
+            instance.transform.rotation = worldRot;
             instance.SetActive(true);
         }
         else
         {
-            instance = Instantiate(prefab, worldPos, currentRotation);
+            instance = Instantiate(prefab, worldPos, worldRot);
             if (PlacedParent != null)
             {
                 instance.transform.SetParent(PlacedParent, worldPositionStays: true);
@@ -942,7 +951,8 @@ public class GridSystem : MonoBehaviour
             cell.z + cellOffset.z - centerAnchorOffset.z);
 
         var footprintVisualOffset = GetFootprintVisualOffset(effectiveFootprint);
-        var canPlace = CanPlaceFootprint(placementCell, effectiveFootprint);
+        var ignoreOccupiedCells = ShouldIgnoreOccupiedCellsForPrefab(GetSelectedPrefab());
+        var canPlace = CanPlaceFootprint(placementCell, effectiveFootprint, ignoreOccupiedCells);
 
         ghostPreviewCell = placementCell;
         ghostPreviewFootprint = effectiveFootprint;
@@ -955,10 +965,46 @@ public class GridSystem : MonoBehaviour
             return;
         }
 
-        ghostObject.transform.position = GetCellWorldPosition(placementCell) + footprintVisualOffset + worldRemainderOffset;
-        ghostObject.transform.rotation = currentRotation;
+        var ghostPosition = GetCellWorldPosition(placementCell) + footprintVisualOffset + worldRemainderOffset;
+        var ghostRotation = currentRotation;
+        if (!ApplySpecialPlacementPose(GetSelectedPrefab(), ref ghostPosition, ref ghostRotation))
+        {
+            SetGhostVisible(false);
+            ghostPreviewCanPlace = false;
+            return;
+        }
+        ghostObject.transform.position = ghostPosition;
+        ghostObject.transform.rotation = ghostRotation;
         SetGhostVisible(true);
         ApplyGhostColor(GhostValidColor);
+    }
+
+    private bool ApplySpecialPlacementPose(GameObject prefab, ref Vector3 position, ref Quaternion rotation)
+    {
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        var upgrader = prefab.GetComponent<ValueUpgrader>();
+        if (upgrader == null)
+        {
+            upgrader = prefab.GetComponentInChildren<ValueUpgrader>(true);
+        }
+
+        if (upgrader == null)
+        {
+            return true;
+        }
+
+        if (upgrader.TryGetSnapPose(position, out var snappedPosition, out var snappedRotation))
+        {
+            position = snappedPosition;
+            rotation = snappedRotation;
+            return true;
+        }
+
+        return false;
     }
 
     private Vector3 GetPlacementOffsetWorld()
@@ -1108,12 +1154,17 @@ public class GridSystem : MonoBehaviour
         }
     }
 
-    private bool CanPlaceFootprint(Vector3Int cell, Vector2Int footprint)
+    private bool CanPlaceFootprint(Vector3Int cell, Vector2Int footprint, bool ignoreOccupiedCells = false)
     {
         var size = NormalizeFootprint(footprint);
         if (!IsFootprintWithinBounds(cell, size))
         {
             return false;
+        }
+
+        if (ignoreOccupiedCells)
+        {
+            return true;
         }
 
         for (int x = 0; x < size.x; x++)
@@ -1129,6 +1180,17 @@ public class GridSystem : MonoBehaviour
         }
 
         return true;
+    }
+
+    private bool ShouldIgnoreOccupiedCellsForPrefab(GameObject prefab)
+    {
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        return prefab.GetComponent<ValueUpgrader>() != null
+            || prefab.GetComponentInChildren<ValueUpgrader>(true) != null;
     }
 
     private void MarkFootprintOccupied(Vector3Int cell, Vector2Int footprint)
