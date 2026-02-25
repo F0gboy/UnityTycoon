@@ -160,12 +160,7 @@ public class InventoryUI : MonoBehaviour
             var slot = Instantiate(prefabToUse, ContentRoot, false);
             slot.transform.localScale = Vector3.one;
 
-            var image = slot.GetComponentInChildren<Image>();
-            if (image != null)
-            {
-                image.sprite = item.Icon;
-                image.enabled = item.Icon != null;
-            }
+            ApplySlotIcon(slot, item.Icon);
 
             var nameText = slot.GetComponentInChildren<TMP_Text>();
             if (nameText != null)
@@ -586,6 +581,97 @@ public class InventoryUI : MonoBehaviour
             }
         }
         return null;
+    }
+
+    private void ApplySlotIcon(GameObject slot, Sprite icon)
+    {
+        var rootImage = slot.GetComponent<Image>();
+        if (rootImage != null)
+        {
+            if (icon == null)
+            {
+                rootImage.enabled = true;
+                return;
+            }
+
+            EnsureImageBackgroundOverlay(slot.transform, rootImage);
+            rootImage.sprite = icon;
+            rootImage.enabled = true;
+            return;
+        }
+
+        var rootRawImage = slot.GetComponent<RawImage>();
+        if (rootRawImage != null)
+        {
+            if (icon == null)
+            {
+                rootRawImage.enabled = true;
+                return;
+            }
+
+            EnsureRawImageBackgroundOverlay(slot.transform, rootRawImage);
+            rootRawImage.texture = icon.texture;
+            rootRawImage.enabled = true;
+            return;
+        }
+    }
+
+    private void EnsureRawImageBackgroundOverlay(Transform root, RawImage rootRawImage)
+    {
+        var existingOverlay = root.Find("BackgroundOverlay")?.GetComponent<RawImage>();
+        if (existingOverlay != null)
+        {
+            return;
+        }
+
+        var overlayObject = new GameObject("BackgroundOverlay", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+        var overlayTransform = overlayObject.GetComponent<RectTransform>();
+        overlayTransform.SetParent(root, false);
+        overlayTransform.anchorMin = Vector2.zero;
+        overlayTransform.anchorMax = Vector2.one;
+        overlayTransform.offsetMin = Vector2.zero;
+        overlayTransform.offsetMax = Vector2.zero;
+        overlayTransform.SetSiblingIndex(0);
+
+        var overlayRawImage = overlayObject.GetComponent<RawImage>();
+        overlayRawImage.texture = rootRawImage.texture;
+        overlayRawImage.material = rootRawImage.material;
+        overlayRawImage.color = rootRawImage.color;
+        overlayRawImage.raycastTarget = false;
+        overlayRawImage.maskable = rootRawImage.maskable;
+        overlayRawImage.uvRect = rootRawImage.uvRect;
+    }
+
+    private void EnsureImageBackgroundOverlay(Transform root, Image rootImage)
+    {
+        var existingOverlay = root.Find("BackgroundOverlay")?.GetComponent<Image>();
+        if (existingOverlay != null)
+        {
+            return;
+        }
+
+        var overlayObject = new GameObject("BackgroundOverlay", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var overlayTransform = overlayObject.GetComponent<RectTransform>();
+        overlayTransform.SetParent(root, false);
+        overlayTransform.anchorMin = Vector2.zero;
+        overlayTransform.anchorMax = Vector2.one;
+        overlayTransform.offsetMin = Vector2.zero;
+        overlayTransform.offsetMax = Vector2.zero;
+        overlayTransform.SetSiblingIndex(0);
+
+        var overlayImage = overlayObject.GetComponent<Image>();
+        overlayImage.sprite = rootImage.sprite;
+        overlayImage.material = rootImage.material;
+        overlayImage.color = rootImage.color;
+        overlayImage.raycastTarget = false;
+        overlayImage.maskable = rootImage.maskable;
+        overlayImage.type = rootImage.type;
+        overlayImage.preserveAspect = rootImage.preserveAspect;
+        overlayImage.fillCenter = rootImage.fillCenter;
+        overlayImage.fillMethod = rootImage.fillMethod;
+        overlayImage.fillAmount = rootImage.fillAmount;
+        overlayImage.fillClockwise = rootImage.fillClockwise;
+        overlayImage.fillOrigin = rootImage.fillOrigin;
     }
 
     [System.Serializable]
