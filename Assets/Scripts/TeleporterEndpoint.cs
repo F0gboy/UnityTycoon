@@ -22,7 +22,7 @@ public class TeleporterEndpoint : MonoBehaviour
     private void Awake()
     {
         triggerCollider = GetComponent<Collider>();
-        if (triggerCollider != null && ForceTriggerCollider)
+        if (ForceTriggerCollider && triggerCollider != null)
         {
             triggerCollider.isTrigger = true;
         }
@@ -62,12 +62,7 @@ public class TeleporterEndpoint : MonoBehaviour
 
     private void TryTeleport(Collider other)
     {
-        if (other == null || !IsAffected(other))
-        {
-            return;
-        }
-
-        if (LinkedEndpoint == null)
+        if (other == null || LinkedEndpoint == null || !IsAffected(other))
         {
             return;
         }
@@ -78,13 +73,8 @@ public class TeleporterEndpoint : MonoBehaviour
             return;
         }
 
-        var cooldown = target.GetComponent<TeleporterCooldownState>();
-        if (cooldown == null)
-        {
-            cooldown = target.AddComponent<TeleporterCooldownState>();
-        }
-
         var endpointId = GetInstanceID();
+        var cooldown = GetOrAddCooldown(target);
         if (cooldown.LockedEndpointId == endpointId)
         {
             return;
@@ -118,12 +108,7 @@ public class TeleporterEndpoint : MonoBehaviour
         }
 
         var target = ResolveTarget(other);
-        if (target == null)
-        {
-            return;
-        }
-
-        var cooldown = target.GetComponent<TeleporterCooldownState>();
+        var cooldown = target != null ? target.GetComponent<TeleporterCooldownState>() : null;
         if (cooldown == null)
         {
             return;
@@ -143,49 +128,33 @@ public class TeleporterEndpoint : MonoBehaviour
         }
 
         var ownCollider = triggerCollider != null ? triggerCollider : GetComponent<Collider>();
-        if (ownCollider != null)
-        {
-            return ownCollider.bounds.center;
-        }
-
-        return transform.position;
+        return ownCollider != null ? ownCollider.bounds.center : transform.position;
     }
 
     private Vector3 GetExitDirection()
     {
         var direction = transform.forward;
         direction.y = 0f;
-        if (direction.sqrMagnitude < 0.001f)
-        {
-            return Vector3.forward;
-        }
-
-        return direction.normalized;
+        return direction.sqrMagnitude < 0.001f ? Vector3.forward : direction.normalized;
     }
 
     private GameObject ResolveTarget(Collider other)
     {
-        if (other.attachedRigidbody != null)
-        {
-            return other.attachedRigidbody.gameObject;
-        }
-
-        return other.transform.root != null ? other.transform.root.gameObject : other.gameObject;
+        return other.attachedRigidbody != null
+            ? other.attachedRigidbody.gameObject
+            : (other.transform.root != null ? other.transform.root.gameObject : other.gameObject);
     }
 
     private bool IsAffected(Collider other)
     {
-        if ((AffectedLayers.value & (1 << other.gameObject.layer)) == 0)
-        {
-            return false;
-        }
+        return (AffectedLayers.value & (1 << other.gameObject.layer)) != 0
+            && (string.IsNullOrEmpty(RequiredTag) || other.CompareTag(RequiredTag));
+    }
 
-        if (!string.IsNullOrEmpty(RequiredTag) && !other.CompareTag(RequiredTag))
-        {
-            return false;
-        }
-
-        return true;
+    private TeleporterCooldownState GetOrAddCooldown(GameObject target)
+    {
+        var cooldown = target.GetComponent<TeleporterCooldownState>();
+        return cooldown != null ? cooldown : target.AddComponent<TeleporterCooldownState>();
     }
 }
 

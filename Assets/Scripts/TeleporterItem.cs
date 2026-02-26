@@ -17,41 +17,25 @@ public class TeleporterItem : MonoBehaviour
     public GameObject InventoryOwnerPrefab;
     public TeleporterEndpoint Endpoint;
 
-    private void Awake()
-    {
-        if (Endpoint == null)
-        {
-            Endpoint = GetComponentInChildren<TeleporterEndpoint>(true);
-        }
-    }
+    private void Awake() => EnsureEndpoint();
 
     public TeleporterEndpoint GetEndpoint()
     {
+        EnsureEndpoint();
+        return Endpoint;
+    }
+
+    public GameObject GetInventoryOwnerPrefab(GameObject fallback) => InventoryOwnerPrefab != null ? InventoryOwnerPrefab : fallback;
+
+    public GameObject GetTeleporterBPrefab() => TeleporterBPrefab;
+
+    public Vector2Int GetTeleporterBFootprint() => new Vector2Int(Mathf.Max(1, TeleporterBFootprint.x), Mathf.Max(1, TeleporterBFootprint.y));
+
+    private void EnsureEndpoint()
+    {
         if (Endpoint == null)
         {
             Endpoint = GetComponentInChildren<TeleporterEndpoint>(true);
         }
-
-        return Endpoint;
-    }
-
-    public GameObject GetInventoryOwnerPrefab(GameObject fallback)
-    {
-        if (InventoryOwnerPrefab != null)
-        {
-            return InventoryOwnerPrefab;
-        }
-
-        return fallback;
-    }
-
-    public GameObject GetTeleporterBPrefab()
-    {
-        return TeleporterBPrefab;
-    }
-
-    public Vector2Int GetTeleporterBFootprint()
-    {
-        return new Vector2Int(Mathf.Max(1, TeleporterBFootprint.x), Mathf.Max(1, TeleporterBFootprint.y));
     }
 }

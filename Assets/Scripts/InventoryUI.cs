@@ -52,7 +52,6 @@ public class InventoryUI : MonoBehaviour
     private readonly List<GameObject> spawnedSlots = new List<GameObject>();
     private GameObject pendingTeleporterPrefab;
     private GameObject pendingTeleporterFirstInstance;
-    private GameObject pendingTeleporterSecondPrefab;
 
     private void Awake()
     {
@@ -293,25 +292,7 @@ public class InventoryUI : MonoBehaviour
         UpdateCoinsText();
 
         var quantityToAdd = IsTeleporterPrefab(prefab) ? 2 : 1;
-        var existing = FindItemByPrefab(prefab);
-        if (existing != null)
-        {
-            existing.Quantity += quantityToAdd;
-        }
-        else
-        {
-            var newItem = new InventoryItem
-            {
-                Name = name,
-                Icon = icon,
-                Prefab = prefab,
-                Footprint = footprint,
-                PlacementOffset = placementOffset,
-                Cost = cost,
-                Quantity = quantityToAdd
-            };
-            Items.Add(newItem);
-        }
+        AddOrIncrementItem(prefab, quantityToAdd, name, icon, footprint, placementOffset, cost);
 
         SetSelectedSlot(null);
         if (GridSystem != null)
@@ -377,29 +358,17 @@ public class InventoryUI : MonoBehaviour
 
         prefab = ResolveInventoryPrefabForPlaced(prefab);
 
-        var existing = FindItemByPrefab(prefab);
-        if (existing != null)
-        {
-            existing.Quantity += 1;
-            Populate();
-            return;
-        }
-
         var storeItem = FindStoreItemByPrefab(prefab);
-        var item = new InventoryItem
-        {
-            Name = !string.IsNullOrWhiteSpace(displayName)
+        AddOrIncrementItem(
+            prefab,
+            1,
+            !string.IsNullOrWhiteSpace(displayName)
                 ? displayName
                 : (storeItem != null ? storeItem.Name : prefab.name),
-            Icon = storeItem != null ? storeItem.Icon : null,
-            Prefab = prefab,
-            Footprint = footprint,
-            PlacementOffset = placementOffset,
-            Cost = storeItem != null ? storeItem.Cost : 0,
-            Quantity = 1
-        };
-
-        Items.Add(item);
+            storeItem != null ? storeItem.Icon : null,
+            footprint,
+            placementOffset,
+            storeItem != null ? storeItem.Cost : 0);
         Populate();
     }
 
@@ -416,26 +385,14 @@ public class InventoryUI : MonoBehaviour
             return false;
         }
 
-        var existing = FindItemByPrefab(storeItem.Prefab);
-        if (existing != null)
-        {
-            existing.Quantity += quantity;
-            Populate();
-            return true;
-        }
-
-        var item = new InventoryItem
-        {
-            Name = storeItem.Name,
-            Icon = storeItem.Icon,
-            Prefab = storeItem.Prefab,
-            Footprint = storeItem.Footprint,
-            PlacementOffset = storeItem.PlacementOffset,
-            Cost = storeItem.Cost,
-            Quantity = quantity
-        };
-
-        Items.Add(item);
+        AddOrIncrementItem(
+            storeItem.Prefab,
+            quantity,
+            storeItem.Name,
+            storeItem.Icon,
+            storeItem.Footprint,
+            storeItem.PlacementOffset,
+            storeItem.Cost);
         Populate();
         return true;
     }
@@ -643,8 +600,8 @@ public class InventoryUI : MonoBehaviour
             {
                 pendingTeleporterPrefab = inventoryPrefab;
                 pendingTeleporterFirstInstance = placedInstance;
-                pendingTeleporterSecondPrefab = ResolveTeleporterSecondPrefab(prefab, inventoryPrefab);
-                SelectTeleporterSecondPlacementPrefab(prefab, pendingTeleporterSecondPrefab);
+                var secondPrefab = ResolveTeleporterSecondPrefab(prefab, inventoryPrefab);
+                SelectTeleporterSecondPlacementPrefab(prefab, secondPrefab);
             }
         }
 
@@ -685,7 +642,6 @@ public class InventoryUI : MonoBehaviour
     {
         pendingTeleporterPrefab = null;
         pendingTeleporterFirstInstance = null;
-        pendingTeleporterSecondPrefab = null;
     }
 
     private void TryLinkTeleporterPair(GameObject firstInstance, GameObject secondInstance)
@@ -730,48 +686,20 @@ public class InventoryUI : MonoBehaviour
             return null;
         }
 
-        var teleporter = prefab.GetComponent<TeleporterItem>();
+        var teleporter = GetTeleporterItemFromPrefab(prefab);
         if (teleporter == null)
-        {
-            teleporter = prefab.GetComponentInChildren<TeleporterItem>(true);
-        }
-
-        if (teleporter != null)
-        {
-            var owner = teleporter.GetInventoryOwnerPrefab(prefab);
-            if (owner == prefab && teleporter.Variant == TeleporterItem.TeleporterVariant.B)
-            {
-                var explicitOwner = FindTeleporterOwnerBySecondPrefab(prefab);
-                if (explicitOwner != null)
-                {
-                    owner = explicitOwner;
-                }
-            }
-
-            if (owner == prefab && teleporter.Variant == TeleporterItem.TeleporterVariant.B)
-            {
-                var pairOwner = FindTeleporterPrefabByPair(
-                    teleporter.PairId,
-                    TeleporterItem.TeleporterVariant.A,
-                    prefab);
-                if (pairOwner != null)
-                {
-                    owner = pairOwner;
-                }
-            }
-
-            if (owner != null)
-            {
-                return owner;
-            }
-        }
-
-        if (FindItemByPrefab(prefab) != null || FindStoreItemByPrefab(prefab) != null)
         {
             return prefab;
         }
 
-        return prefab;
+        var owner = teleporter.GetInventoryOwnerPrefab(prefab);
+        if (owner == prefab && teleporter.Variant == TeleporterItem.TeleporterVariant.B)
+        {
+            owner = FindTeleporterOwnerBySecondPrefab(prefab)
+                ?? FindTeleporterPrefabByPair(teleporter.PairId, TeleporterItem.TeleporterVariant.A, prefab);
+        }
+
+        return owner ?? prefab;
     }
 
     private GameObject ResolveTeleporterSecondPrefab(GameObject placedPrefab, GameObject inventoryPrefab)
@@ -816,13 +744,23 @@ public class InventoryUI : MonoBehaviour
             return null;
         }
 
-        var fromStore = FindTeleporterOwnerBySecondPrefabInInventoryItems(StoreItems, secondPrefab);
+        var fromStore = FindTeleporterPrefabInItems(
+            StoreItems,
+            TeleporterItem.TeleporterVariant.A,
+            pairId: null,
+            teleporterBPrefab: secondPrefab,
+            exclude: null);
         if (fromStore != null)
         {
             return fromStore;
         }
 
-        var fromInventory = FindTeleporterOwnerBySecondPrefabInInventoryItems(Items, secondPrefab);
+        var fromInventory = FindTeleporterPrefabInItems(
+            Items,
+            TeleporterItem.TeleporterVariant.A,
+            pairId: null,
+            teleporterBPrefab: secondPrefab,
+            exclude: null);
         if (fromInventory != null)
         {
             return fromInventory;
@@ -854,41 +792,6 @@ public class InventoryUI : MonoBehaviour
         return null;
     }
 
-    private GameObject FindTeleporterOwnerBySecondPrefabInInventoryItems(List<InventoryItem> source, GameObject secondPrefab)
-    {
-        if (source == null || secondPrefab == null)
-        {
-            return null;
-        }
-
-        for (int i = 0; i < source.Count; i++)
-        {
-            var prefab = source[i] != null ? source[i].Prefab : null;
-            if (prefab == null)
-            {
-                continue;
-            }
-
-            var teleporter = GetTeleporterItemFromPrefab(prefab);
-            if (teleporter == null)
-            {
-                continue;
-            }
-
-            if (teleporter.Variant != TeleporterItem.TeleporterVariant.A)
-            {
-                continue;
-            }
-
-            if (teleporter.GetTeleporterBPrefab() == secondPrefab)
-            {
-                return prefab;
-            }
-        }
-
-        return null;
-    }
-
     private GameObject FindTeleporterPrefabByPair(string pairId, TeleporterItem.TeleporterVariant variant, GameObject exclude)
     {
         if (string.IsNullOrWhiteSpace(pairId))
@@ -896,13 +799,23 @@ public class InventoryUI : MonoBehaviour
             return null;
         }
 
-        var fromStore = FindTeleporterPrefabByPairInInventoryItems(StoreItems, pairId, variant, exclude);
+        var fromStore = FindTeleporterPrefabInItems(
+            StoreItems,
+            variant,
+            pairId,
+            teleporterBPrefab: null,
+            exclude);
         if (fromStore != null)
         {
             return fromStore;
         }
 
-        var fromInventory = FindTeleporterPrefabByPairInInventoryItems(Items, pairId, variant, exclude);
+        var fromInventory = FindTeleporterPrefabInItems(
+            Items,
+            variant,
+            pairId,
+            teleporterBPrefab: null,
+            exclude);
         if (fromInventory != null)
         {
             return fromInventory;
@@ -941,10 +854,11 @@ public class InventoryUI : MonoBehaviour
         return null;
     }
 
-    private GameObject FindTeleporterPrefabByPairInInventoryItems(
+    private GameObject FindTeleporterPrefabInItems(
         List<InventoryItem> source,
-        string pairId,
         TeleporterItem.TeleporterVariant variant,
+        string pairId,
+        GameObject teleporterBPrefab,
         GameObject exclude)
     {
         if (source == null)
@@ -971,7 +885,13 @@ public class InventoryUI : MonoBehaviour
                 continue;
             }
 
-            if (!string.Equals(teleporter.PairId, pairId, System.StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(pairId)
+                && !string.Equals(teleporter.PairId, pairId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (teleporterBPrefab != null && teleporter.GetTeleporterBPrefab() != teleporterBPrefab)
             {
                 continue;
             }
@@ -1040,6 +960,31 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
+        var storeItem = FindStoreItemByPrefab(prefab);
+        AddOrIncrementItem(
+            prefab,
+            amount,
+            storeItem != null ? storeItem.Name : prefab.name,
+            storeItem != null ? storeItem.Icon : null,
+            storeItem != null ? storeItem.Footprint : Vector2Int.one,
+            storeItem != null ? storeItem.PlacementOffset : Vector3.zero,
+            storeItem != null ? storeItem.Cost : 0);
+    }
+
+    private void AddOrIncrementItem(
+        GameObject prefab,
+        int amount,
+        string name,
+        Sprite icon,
+        Vector2Int footprint,
+        Vector3 placementOffset,
+        int cost)
+    {
+        if (prefab == null || amount <= 0)
+        {
+            return;
+        }
+
         var existing = FindItemByPrefab(prefab);
         if (existing != null)
         {
@@ -1047,19 +992,16 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        var storeItem = FindStoreItemByPrefab(prefab);
-        var item = new InventoryItem
+        Items.Add(new InventoryItem
         {
-            Name = storeItem != null ? storeItem.Name : prefab.name,
-            Icon = storeItem != null ? storeItem.Icon : null,
+            Name = name,
+            Icon = icon,
             Prefab = prefab,
-            Footprint = storeItem != null ? storeItem.Footprint : Vector2Int.one,
-            PlacementOffset = storeItem != null ? storeItem.PlacementOffset : Vector3.zero,
-            Cost = storeItem != null ? storeItem.Cost : 0,
+            Footprint = footprint,
+            PlacementOffset = placementOffset,
+            Cost = cost,
             Quantity = amount
-        };
-
-        Items.Add(item);
+        });
     }
 
     private InventoryItem FindItemByPrefab(GameObject prefab)
