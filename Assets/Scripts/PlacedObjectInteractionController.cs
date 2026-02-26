@@ -413,19 +413,112 @@ public class PlacedObjectInteractionController : MonoBehaviour
         }
 
         var inventory = Inventory != null ? Inventory : InventoryUI.Instance;
+        var hasLinkedTeleporter = TryGetLinkedTeleporterData(selectedData, out var linkedData);
+
         if (inventory != null)
         {
-            inventory.AddItemFromWorld(
-                selectedData.SourcePrefab,
-                selectedData.BaseFootprint,
-                selectedData.PlacementOffset,
-                selectedData.DisplayName);
+            if (hasLinkedTeleporter && linkedData != null)
+            {
+                var pickupData = ResolveTeleporterPickupData(selectedData, linkedData);
+                if (pickupData != null && inventory.TryResolveStorePrefabForPlaced(pickupData.SourcePrefab, out var storeTeleporterPrefab))
+                {
+                    inventory.TryAddStoreItemToInventory(storeTeleporterPrefab, 2);
+                }
+                else
+                {
+                    inventory.AddItemFromWorld(
+                        pickupData.SourcePrefab,
+                        pickupData.BaseFootprint,
+                        pickupData.PlacementOffset,
+                        pickupData.DisplayName);
+
+                    inventory.AddItemFromWorld(
+                        pickupData.SourcePrefab,
+                        pickupData.BaseFootprint,
+                        pickupData.PlacementOffset,
+                        pickupData.DisplayName);
+                }
+            }
+            else
+            {
+                inventory.AddItemFromWorld(
+                    selectedData.SourcePrefab,
+                    selectedData.BaseFootprint,
+                    selectedData.PlacementOffset,
+                    selectedData.DisplayName);
+            }
+        }
+
+        if (hasLinkedTeleporter && linkedData != null)
+        {
+            GridSystem.RemovePlacedObject(linkedData.gameObject);
         }
 
         if (GridSystem.RemovePlacedObject(selectedData.gameObject))
         {
             ClearSelection();
         }
+    }
+
+    private bool TryGetLinkedTeleporterData(PlaceableObjectData source, out PlaceableObjectData linked)
+    {
+        linked = null;
+        if (source == null || source.gameObject == null)
+        {
+            return false;
+        }
+
+        var teleporterItem = source.GetComponentInChildren<TeleporterItem>(true);
+        if (teleporterItem == null)
+        {
+            return false;
+        }
+
+        var endpoint = teleporterItem.GetEndpoint();
+        if (endpoint == null || endpoint.LinkedEndpoint == null)
+        {
+            return false;
+        }
+
+        var linkedRoot = endpoint.LinkedEndpoint.GetComponentInParent<PlaceableObjectData>();
+        if (linkedRoot == null || linkedRoot == source)
+        {
+            return false;
+        }
+
+        if (!GridSystem.TryGetPlacedObjectData(linkedRoot.gameObject, out linked))
+        {
+            return false;
+        }
+
+        return linked != null;
+    }
+
+    private PlaceableObjectData ResolveTeleporterPickupData(PlaceableObjectData first, PlaceableObjectData second)
+    {
+        if (first == null)
+        {
+            return second;
+        }
+
+        if (second == null)
+        {
+            return first;
+        }
+
+        var firstTeleporter = first.GetComponentInChildren<TeleporterItem>(true);
+        if (firstTeleporter != null && firstTeleporter.Variant == TeleporterItem.TeleporterVariant.A)
+        {
+            return first;
+        }
+
+        var secondTeleporter = second.GetComponentInChildren<TeleporterItem>(true);
+        if (secondTeleporter != null && secondTeleporter.Variant == TeleporterItem.TeleporterVariant.A)
+        {
+            return second;
+        }
+
+        return first;
     }
 
     private void OnSellClicked()

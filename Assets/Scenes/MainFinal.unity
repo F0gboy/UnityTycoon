@@ -14393,6 +14393,13 @@ MonoBehaviour:
     PlacementOffset: {x: 0, y: 0, z: 0}
     Cost: 100
     Quantity: 1
+  - Name: Teleporter
+    Icon: {fileID: 21300000, guid: 32d2c43f6f2bc10409d4f740c1d993e1, type: 3}
+    Prefab: {fileID: 2539157315223561284, guid: 1c7318995074d7642886fc0852ba52e6, type: 3}
+    Footprint: {x: 3, y: 3}
+    PlacementOffset: {x: 0, y: 0, z: 0}
+    Cost: 100
+    Quantity: 1
   StartingCoins: 250
   CoinsTextTMP: {fileID: 55270146}
   ToggleKey: 102

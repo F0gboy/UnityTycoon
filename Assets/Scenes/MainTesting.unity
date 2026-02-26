@@ -1970,6 +1970,7 @@ MonoBehaviour:
     Prefab: {fileID: 5785298354766236308, guid: dc81d9595d6dc064495a3ff58682afaf, type: 3}
     Footprint: {x: 3, y: 3}
     PlacementOffset: {x: 0, y: 0, z: 0}
+    OccupancyCellOffset: {x: 0, y: 0}
     Cost: 35
     Quantity: 1
   - Name: Basic Conveyor
@@ -1977,6 +1978,7 @@ MonoBehaviour:
     Prefab: {fileID: 9061606983911019492, guid: fb96c456b8304094cb8cf4116cebf29f, type: 3}
     Footprint: {x: 5, y: 3}
     PlacementOffset: {x: 1, y: 0, z: 0}
+    OccupancyCellOffset: {x: 0, y: 0}
     Cost: 15
     Quantity: 1
   - Name: Selling Pit
@@ -1984,6 +1986,7 @@ MonoBehaviour:
     Prefab: {fileID: 7306060856212608626, guid: e0972c6772ddff04b9c77d5453a3bbb0, type: 3}
     Footprint: {x: 3, y: 3}
     PlacementOffset: {x: 0, y: 0, z: 0}
+    OccupancyCellOffset: {x: 0, y: 0}
     Cost: 100
     Quantity: 1
   - Name: Big Dropper
@@ -1991,6 +1994,7 @@ MonoBehaviour:
     Prefab: {fileID: 5785298354766236308, guid: 24c88c4136078724dbb86534170b2312, type: 3}
     Footprint: {x: 3, y: 3}
     PlacementOffset: {x: 0, y: 0, z: 0}
+    OccupancyCellOffset: {x: 0, y: 0}
     Cost: 300
     Quantity: 1
   - Name: Basic Upgrader
@@ -1998,9 +2002,18 @@ MonoBehaviour:
     Prefab: {fileID: 4664020713463211675, guid: 6d12c90cbeba3854fb345ea35a9967db, type: 3}
     Footprint: {x: 1, y: 5}
     PlacementOffset: {x: 0, y: 0, z: 0}
+    OccupancyCellOffset: {x: 0, y: 0}
     Cost: 100
     Quantity: 1
-  StartingCoins: 250
+  - Name: Portal
+    Icon: {fileID: 0}
+    Prefab: {fileID: 2539157315223561284, guid: 1c7318995074d7642886fc0852ba52e6, type: 3}
+    Footprint: {x: 3, y: 3}
+    PlacementOffset: {x: 0, y: 0, z: 0}
+    OccupancyCellOffset: {x: 0, y: 0}
+    Cost: 100
+    Quantity: 1
+  StartingCoins: 600
   CoinsTextTMP: {fileID: 482880758}
   ToggleKey: 102
   KeepCursorUnlockedWhileVisible: 1
@@ -2032,7 +2045,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1498991840
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2934,7 +2947,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2086326531
 MonoBehaviour:
   m_ObjectHideFlags: 0

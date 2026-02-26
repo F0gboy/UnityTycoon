@@ -6,6 +6,7 @@ public class PlaceableObjectData : MonoBehaviour
     public string DisplayName;
     public Vector2Int BaseFootprint = Vector2Int.one;
     public Vector3 PlacementOffset = Vector3.zero;
+    public Vector2Int OccupancyCellOffset = Vector2Int.zero;
     public Vector3Int OccupiedCell;
     public Vector2Int OccupiedFootprint = Vector2Int.one;
 

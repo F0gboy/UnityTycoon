@@ -44,6 +44,7 @@ public class GridSystem : MonoBehaviour
     public int SelectedIndex = 0;
     public bool UseInputToggle = true;
     public System.Action<GameObject> ItemPlaced;
+    public System.Action<GameObject, GameObject> ItemPlacedWithInstance;
     public bool IsMovingPlacedObject => isMovingPlacedObject;
     public bool HasPlacementSelection => GetSelectedPrefab() != null;
 
@@ -58,6 +59,7 @@ public class GridSystem : MonoBehaviour
     private Transform ghostParent;
     private Vector2Int selectedFootprint = Vector2Int.one;
     private Vector3 selectedPlacementOffset = Vector3.zero;
+    private Vector2Int selectedOccupancyCellOffset = Vector2Int.zero;
     private bool hasGhostPreviewCells;
     private Vector3Int ghostPreviewCell;
     private Vector2Int ghostPreviewFootprint = Vector2Int.one;
@@ -444,6 +446,7 @@ public class GridSystem : MonoBehaviour
             }
 
             ItemPlaced?.Invoke(prefab);
+            ItemPlacedWithInstance?.Invoke(prefab, instance);
         }
 
         MarkFootprintOccupied(placementCell, effectiveFootprint);
@@ -495,6 +498,7 @@ public class GridSystem : MonoBehaviour
         selectedPrefabOverride = data.SourcePrefab != null ? data.SourcePrefab : movingPlacedObject;
         selectedFootprint = NormalizeFootprint(data.BaseFootprint);
         selectedPlacementOffset = data.PlacementOffset;
+        selectedOccupancyCellOffset = data.OccupancyCellOffset;
         PlacementModeActive = true;
         RefreshGhost();
         return true;
@@ -547,6 +551,7 @@ public class GridSystem : MonoBehaviour
         selectedPrefabOverride = null;
         selectedFootprint = Vector2Int.one;
         selectedPlacementOffset = Vector3.zero;
+        selectedOccupancyCellOffset = Vector2Int.zero;
         RefreshGhost();
     }
 
@@ -556,6 +561,7 @@ public class GridSystem : MonoBehaviour
         selectedPrefabOverride = null;
         selectedFootprint = Vector2Int.one;
         selectedPlacementOffset = Vector3.zero;
+        selectedOccupancyCellOffset = Vector2Int.zero;
         DestroyGhost();
     }
 
@@ -564,6 +570,7 @@ public class GridSystem : MonoBehaviour
         selectedPrefabOverride = prefab;
         selectedFootprint = Vector2Int.one;
         selectedPlacementOffset = Vector3.zero;
+        selectedOccupancyCellOffset = Vector2Int.zero;
         RefreshGhost();
     }
 
@@ -573,6 +580,7 @@ public class GridSystem : MonoBehaviour
         selectedPrefabOverride = null;
         selectedFootprint = NormalizeFootprint(footprint);
         selectedPlacementOffset = Vector3.zero;
+        selectedOccupancyCellOffset = Vector2Int.zero;
         RefreshGhost();
     }
 
@@ -581,6 +589,7 @@ public class GridSystem : MonoBehaviour
         selectedPrefabOverride = prefab;
         selectedFootprint = NormalizeFootprint(footprint);
         selectedPlacementOffset = Vector3.zero;
+        selectedOccupancyCellOffset = Vector2Int.zero;
         RefreshGhost();
     }
 
@@ -590,6 +599,7 @@ public class GridSystem : MonoBehaviour
         selectedPrefabOverride = null;
         selectedFootprint = NormalizeFootprint(footprint);
         selectedPlacementOffset = placementOffset;
+        selectedOccupancyCellOffset = Vector2Int.zero;
         RefreshGhost();
     }
 
@@ -598,6 +608,26 @@ public class GridSystem : MonoBehaviour
         selectedPrefabOverride = prefab;
         selectedFootprint = NormalizeFootprint(footprint);
         selectedPlacementOffset = placementOffset;
+        selectedOccupancyCellOffset = Vector2Int.zero;
+        RefreshGhost();
+    }
+
+    public void SelectItem(int index, Vector2Int footprint, Vector3 placementOffset, Vector2Int occupancyCellOffset)
+    {
+        SelectedIndex = index;
+        selectedPrefabOverride = null;
+        selectedFootprint = NormalizeFootprint(footprint);
+        selectedPlacementOffset = placementOffset;
+        selectedOccupancyCellOffset = occupancyCellOffset;
+        RefreshGhost();
+    }
+
+    public void SelectPrefab(GameObject prefab, Vector2Int footprint, Vector3 placementOffset, Vector2Int occupancyCellOffset)
+    {
+        selectedPrefabOverride = prefab;
+        selectedFootprint = NormalizeFootprint(footprint);
+        selectedPlacementOffset = placementOffset;
+        selectedOccupancyCellOffset = occupancyCellOffset;
         RefreshGhost();
     }
 
@@ -949,6 +979,8 @@ public class GridSystem : MonoBehaviour
             cell.x + cellOffset.x - centerAnchorOffset.x,
             0,
             cell.z + cellOffset.z - centerAnchorOffset.z);
+        placementCell += GetRotatedCellOffset(selectedOccupancyCellOffset);
+        placementCell += GetRotatedCellOffset(selectedOccupancyCellOffset);
 
         var footprintVisualOffset = GetFootprintVisualOffset(effectiveFootprint);
         var ignoreOccupiedCells = ShouldIgnoreOccupiedCellsForPrefab(GetSelectedPrefab());
@@ -1271,6 +1303,7 @@ public class GridSystem : MonoBehaviour
         data.SourcePrefab = sourcePrefab;
         data.BaseFootprint = NormalizeFootprint(baseFootprint);
         data.PlacementOffset = placementOffset;
+        data.OccupancyCellOffset = selectedOccupancyCellOffset;
         data.DisplayName = sourcePrefab != null ? sourcePrefab.name : placedObject.name;
         data.SetPlacementData(occupiedCell, NormalizeFootprint(occupiedFootprint));
     }
@@ -1394,6 +1427,30 @@ public class GridSystem : MonoBehaviour
         }
 
         return size;
+    }
+
+    private Vector3Int GetRotatedCellOffset(Vector2Int cellOffset)
+    {
+        var offsetX = cellOffset.x;
+        var offsetZ = cellOffset.y;
+
+        var yawSteps = Mathf.RoundToInt(currentRotation.eulerAngles.y / 90f) % 4;
+        if (yawSteps < 0)
+        {
+            yawSteps += 4;
+        }
+
+        switch (yawSteps)
+        {
+            case 1:
+                return new Vector3Int(offsetZ, 0, -offsetX);
+            case 2:
+                return new Vector3Int(-offsetX, 0, -offsetZ);
+            case 3:
+                return new Vector3Int(-offsetZ, 0, offsetX);
+            default:
+                return new Vector3Int(offsetX, 0, offsetZ);
+        }
     }
 
     private void UpdateLineColors()

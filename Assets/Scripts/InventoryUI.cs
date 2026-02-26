@@ -50,6 +50,9 @@ public class InventoryUI : MonoBehaviour
     private InventoryItemSlot selectedSlot;
     private int coins;
     private readonly List<GameObject> spawnedSlots = new List<GameObject>();
+    private GameObject pendingTeleporterPrefab;
+    private GameObject pendingTeleporterFirstInstance;
+    private GameObject pendingTeleporterSecondPrefab;
 
     private void Awake()
     {
@@ -123,6 +126,7 @@ public class InventoryUI : MonoBehaviour
 
         if (!visible)
         {
+            HandleIncompleteTeleporterPlacementOnInventoryClose();
             SetSelectedSlot(null);
             if (GridSystem != null)
             {
@@ -288,10 +292,11 @@ public class InventoryUI : MonoBehaviour
         coins -= cost;
         UpdateCoinsText();
 
+        var quantityToAdd = IsTeleporterPrefab(prefab) ? 2 : 1;
         var existing = FindItemByPrefab(prefab);
         if (existing != null)
         {
-            existing.Quantity += 1;
+            existing.Quantity += quantityToAdd;
         }
         else
         {
@@ -303,7 +308,7 @@ public class InventoryUI : MonoBehaviour
                 Footprint = footprint,
                 PlacementOffset = placementOffset,
                 Cost = cost,
-                Quantity = 1
+                Quantity = quantityToAdd
             };
             Items.Add(newItem);
         }
@@ -344,6 +349,8 @@ public class InventoryUI : MonoBehaviour
             return false;
         }
 
+        prefab = ResolveInventoryPrefabForPlaced(prefab);
+
         var storeItem = FindStoreItemByPrefab(prefab);
         if (storeItem != null)
         {
@@ -367,6 +374,8 @@ public class InventoryUI : MonoBehaviour
         {
             return;
         }
+
+        prefab = ResolveInventoryPrefabForPlaced(prefab);
 
         var existing = FindItemByPrefab(prefab);
         if (existing != null)
@@ -392,6 +401,75 @@ public class InventoryUI : MonoBehaviour
 
         Items.Add(item);
         Populate();
+    }
+
+    public bool TryAddStoreItemToInventory(GameObject storePrefab, int quantity = 1)
+    {
+        if (storePrefab == null || quantity <= 0)
+        {
+            return false;
+        }
+
+        var storeItem = FindStoreItemByPrefab(storePrefab);
+        if (storeItem == null)
+        {
+            return false;
+        }
+
+        var existing = FindItemByPrefab(storeItem.Prefab);
+        if (existing != null)
+        {
+            existing.Quantity += quantity;
+            Populate();
+            return true;
+        }
+
+        var item = new InventoryItem
+        {
+            Name = storeItem.Name,
+            Icon = storeItem.Icon,
+            Prefab = storeItem.Prefab,
+            Footprint = storeItem.Footprint,
+            PlacementOffset = storeItem.PlacementOffset,
+            Cost = storeItem.Cost,
+            Quantity = quantity
+        };
+
+        Items.Add(item);
+        Populate();
+        return true;
+    }
+
+    public bool TryResolveStorePrefabForPlaced(GameObject placedPrefab, out GameObject storePrefab)
+    {
+        storePrefab = null;
+        if (placedPrefab == null)
+        {
+            return false;
+        }
+
+        var resolved = ResolveInventoryPrefabForPlaced(placedPrefab);
+        if (resolved != null && FindStoreItemByPrefab(resolved) != null)
+        {
+            storePrefab = resolved;
+            return true;
+        }
+
+        var teleporter = GetTeleporterItemFromPrefab(placedPrefab);
+        if (teleporter != null)
+        {
+            var canonicalA = FindTeleporterPrefabByPair(
+                teleporter.PairId,
+                TeleporterItem.TeleporterVariant.A,
+                null);
+            if (canonicalA != null && FindStoreItemByPrefab(canonicalA) != null)
+            {
+                storePrefab = canonicalA;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void SetSelectedSlot(InventoryItemSlot slot)
@@ -510,19 +588,28 @@ public class InventoryUI : MonoBehaviour
     {
         if (GridSystem != null)
         {
-            GridSystem.ItemPlaced -= HandleItemPlaced;
-            GridSystem.ItemPlaced += HandleItemPlaced;
+            GridSystem.ItemPlacedWithInstance -= HandleItemPlacedWithInstance;
+            GridSystem.ItemPlacedWithInstance += HandleItemPlacedWithInstance;
         }
     }
 
-    private void HandleItemPlaced(GameObject prefab)
+    private void HandleItemPlacedWithInstance(GameObject prefab, GameObject placedInstance)
     {
         if (prefab == null)
         {
             return;
         }
 
-        var item = FindItemByPrefab(prefab);
+        var inventoryPrefab = ResolveInventoryPrefabForPlaced(prefab);
+        if (IsTeleporterPrefab(prefab)
+            && pendingTeleporterPrefab != null
+            && pendingTeleporterFirstInstance != null
+            && placedInstance != pendingTeleporterFirstInstance)
+        {
+            inventoryPrefab = pendingTeleporterPrefab;
+        }
+
+        var item = FindItemByPrefab(inventoryPrefab);
         if (item == null)
         {
             return;
@@ -539,7 +626,440 @@ public class InventoryUI : MonoBehaviour
             }
         }
 
+        if (IsTeleporterPrefab(prefab))
+        {
+            if (pendingTeleporterPrefab == inventoryPrefab && pendingTeleporterFirstInstance != null)
+            {
+                TryLinkTeleporterPair(pendingTeleporterFirstInstance, placedInstance);
+                ClearPendingTeleporterPlacement();
+
+                SetSelectedSlot(null);
+                if (GridSystem != null)
+                {
+                    GridSystem.ClearSelection();
+                }
+            }
+            else
+            {
+                pendingTeleporterPrefab = inventoryPrefab;
+                pendingTeleporterFirstInstance = placedInstance;
+                pendingTeleporterSecondPrefab = ResolveTeleporterSecondPrefab(prefab, inventoryPrefab);
+                SelectTeleporterSecondPlacementPrefab(prefab, pendingTeleporterSecondPrefab);
+            }
+        }
+
         Populate();
+    }
+
+    private void HandleIncompleteTeleporterPlacementOnInventoryClose()
+    {
+        if (pendingTeleporterPrefab == null)
+        {
+            return;
+        }
+
+        var wasRemoved = false;
+        if (pendingTeleporterFirstInstance != null)
+        {
+            if (GridSystem != null)
+            {
+                wasRemoved = GridSystem.RemovePlacedObject(pendingTeleporterFirstInstance);
+            }
+            else
+            {
+                Destroy(pendingTeleporterFirstInstance);
+                wasRemoved = true;
+            }
+        }
+
+        if (wasRemoved)
+        {
+            AddItemQuantity(pendingTeleporterPrefab, 1);
+            Populate();
+        }
+
+        ClearPendingTeleporterPlacement();
+    }
+
+    private void ClearPendingTeleporterPlacement()
+    {
+        pendingTeleporterPrefab = null;
+        pendingTeleporterFirstInstance = null;
+        pendingTeleporterSecondPrefab = null;
+    }
+
+    private void TryLinkTeleporterPair(GameObject firstInstance, GameObject secondInstance)
+    {
+        if (firstInstance == null || secondInstance == null)
+        {
+            return;
+        }
+
+        var firstItem = firstInstance.GetComponentInChildren<TeleporterItem>(true);
+        var secondItem = secondInstance.GetComponentInChildren<TeleporterItem>(true);
+        if (firstItem == null || secondItem == null)
+        {
+            return;
+        }
+
+        var firstEndpoint = firstItem.GetEndpoint();
+        var secondEndpoint = secondItem.GetEndpoint();
+        if (firstEndpoint == null || secondEndpoint == null)
+        {
+            return;
+        }
+
+        firstEndpoint.LinkBidirectional(secondEndpoint);
+    }
+
+    private bool IsTeleporterPrefab(GameObject prefab)
+    {
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        return prefab.GetComponent<TeleporterItem>() != null
+            || prefab.GetComponentInChildren<TeleporterItem>(true) != null;
+    }
+
+    private GameObject ResolveInventoryPrefabForPlaced(GameObject prefab)
+    {
+        if (prefab == null)
+        {
+            return null;
+        }
+
+        var teleporter = prefab.GetComponent<TeleporterItem>();
+        if (teleporter == null)
+        {
+            teleporter = prefab.GetComponentInChildren<TeleporterItem>(true);
+        }
+
+        if (teleporter != null)
+        {
+            var owner = teleporter.GetInventoryOwnerPrefab(prefab);
+            if (owner == prefab && teleporter.Variant == TeleporterItem.TeleporterVariant.B)
+            {
+                var explicitOwner = FindTeleporterOwnerBySecondPrefab(prefab);
+                if (explicitOwner != null)
+                {
+                    owner = explicitOwner;
+                }
+            }
+
+            if (owner == prefab && teleporter.Variant == TeleporterItem.TeleporterVariant.B)
+            {
+                var pairOwner = FindTeleporterPrefabByPair(
+                    teleporter.PairId,
+                    TeleporterItem.TeleporterVariant.A,
+                    prefab);
+                if (pairOwner != null)
+                {
+                    owner = pairOwner;
+                }
+            }
+
+            if (owner != null)
+            {
+                return owner;
+            }
+        }
+
+        if (FindItemByPrefab(prefab) != null || FindStoreItemByPrefab(prefab) != null)
+        {
+            return prefab;
+        }
+
+        return prefab;
+    }
+
+    private GameObject ResolveTeleporterSecondPrefab(GameObject placedPrefab, GameObject inventoryPrefab)
+    {
+        var teleporter = placedPrefab != null
+            ? placedPrefab.GetComponent<TeleporterItem>()
+            : null;
+        if (teleporter == null && placedPrefab != null)
+        {
+            teleporter = placedPrefab.GetComponentInChildren<TeleporterItem>(true);
+        }
+
+        if (teleporter != null)
+        {
+            var explicitB = teleporter.GetTeleporterBPrefab();
+            if (explicitB != null && explicitB != placedPrefab)
+            {
+                return explicitB;
+            }
+
+            var targetVariant = teleporter.Variant == TeleporterItem.TeleporterVariant.A
+                ? TeleporterItem.TeleporterVariant.B
+                : TeleporterItem.TeleporterVariant.A;
+
+            var byPair = FindTeleporterPrefabByPair(
+                teleporter.PairId,
+                targetVariant,
+                placedPrefab);
+            if (byPair != null)
+            {
+                return byPair;
+            }
+        }
+
+        return inventoryPrefab;
+    }
+
+    private GameObject FindTeleporterOwnerBySecondPrefab(GameObject secondPrefab)
+    {
+        if (secondPrefab == null)
+        {
+            return null;
+        }
+
+        var fromStore = FindTeleporterOwnerBySecondPrefabInInventoryItems(StoreItems, secondPrefab);
+        if (fromStore != null)
+        {
+            return fromStore;
+        }
+
+        var fromInventory = FindTeleporterOwnerBySecondPrefabInInventoryItems(Items, secondPrefab);
+        if (fromInventory != null)
+        {
+            return fromInventory;
+        }
+
+        if (GridSystem != null && GridSystem.PlaceablePrefabs != null)
+        {
+            for (int i = 0; i < GridSystem.PlaceablePrefabs.Count; i++)
+            {
+                var candidate = GridSystem.PlaceablePrefabs[i];
+                var teleporter = GetTeleporterItemFromPrefab(candidate);
+                if (teleporter == null)
+                {
+                    continue;
+                }
+
+                if (teleporter.Variant != TeleporterItem.TeleporterVariant.A)
+                {
+                    continue;
+                }
+
+                if (teleporter.GetTeleporterBPrefab() == secondPrefab)
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private GameObject FindTeleporterOwnerBySecondPrefabInInventoryItems(List<InventoryItem> source, GameObject secondPrefab)
+    {
+        if (source == null || secondPrefab == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            var prefab = source[i] != null ? source[i].Prefab : null;
+            if (prefab == null)
+            {
+                continue;
+            }
+
+            var teleporter = GetTeleporterItemFromPrefab(prefab);
+            if (teleporter == null)
+            {
+                continue;
+            }
+
+            if (teleporter.Variant != TeleporterItem.TeleporterVariant.A)
+            {
+                continue;
+            }
+
+            if (teleporter.GetTeleporterBPrefab() == secondPrefab)
+            {
+                return prefab;
+            }
+        }
+
+        return null;
+    }
+
+    private GameObject FindTeleporterPrefabByPair(string pairId, TeleporterItem.TeleporterVariant variant, GameObject exclude)
+    {
+        if (string.IsNullOrWhiteSpace(pairId))
+        {
+            return null;
+        }
+
+        var fromStore = FindTeleporterPrefabByPairInInventoryItems(StoreItems, pairId, variant, exclude);
+        if (fromStore != null)
+        {
+            return fromStore;
+        }
+
+        var fromInventory = FindTeleporterPrefabByPairInInventoryItems(Items, pairId, variant, exclude);
+        if (fromInventory != null)
+        {
+            return fromInventory;
+        }
+
+        if (GridSystem != null && GridSystem.PlaceablePrefabs != null)
+        {
+            for (int i = 0; i < GridSystem.PlaceablePrefabs.Count; i++)
+            {
+                var prefab = GridSystem.PlaceablePrefabs[i];
+                var teleporter = GetTeleporterItemFromPrefab(prefab);
+                if (teleporter == null)
+                {
+                    continue;
+                }
+
+                if (prefab == exclude)
+                {
+                    continue;
+                }
+
+                if (teleporter.Variant != variant)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(teleporter.PairId, pairId, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                return prefab;
+            }
+        }
+
+        return null;
+    }
+
+    private GameObject FindTeleporterPrefabByPairInInventoryItems(
+        List<InventoryItem> source,
+        string pairId,
+        TeleporterItem.TeleporterVariant variant,
+        GameObject exclude)
+    {
+        if (source == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            var prefab = source[i] != null ? source[i].Prefab : null;
+            if (prefab == null || prefab == exclude)
+            {
+                continue;
+            }
+
+            var teleporter = GetTeleporterItemFromPrefab(prefab);
+            if (teleporter == null)
+            {
+                continue;
+            }
+
+            if (teleporter.Variant != variant)
+            {
+                continue;
+            }
+
+            if (!string.Equals(teleporter.PairId, pairId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return prefab;
+        }
+
+        return null;
+    }
+
+    private TeleporterItem GetTeleporterItemFromPrefab(GameObject prefab)
+    {
+        if (prefab == null)
+        {
+            return null;
+        }
+
+        var teleporter = prefab.GetComponent<TeleporterItem>();
+        if (teleporter == null)
+        {
+            teleporter = prefab.GetComponentInChildren<TeleporterItem>(true);
+        }
+
+        return teleporter;
+    }
+
+    private void SelectTeleporterSecondPlacementPrefab(GameObject sourcePrefab, GameObject secondPrefab)
+    {
+        if (GridSystem == null || secondPrefab == null)
+        {
+            return;
+        }
+
+        var storeItem = FindStoreItemByPrefab(secondPrefab);
+        var inventoryItem = FindItemByPrefab(secondPrefab);
+
+        var footprint = Vector2Int.one;
+        var placementOffset = Vector3.zero;
+
+        if (storeItem != null)
+        {
+            footprint = storeItem.Footprint;
+            placementOffset = storeItem.PlacementOffset;
+        }
+        else if (inventoryItem != null)
+        {
+            footprint = inventoryItem.Footprint;
+            placementOffset = inventoryItem.PlacementOffset;
+        }
+        else
+        {
+            var sourceTeleporter = GetTeleporterItemFromPrefab(sourcePrefab);
+            if (sourceTeleporter != null && sourceTeleporter.GetTeleporterBPrefab() == secondPrefab)
+            {
+                footprint = sourceTeleporter.GetTeleporterBFootprint();
+            }
+        }
+
+        GridSystem.SelectPrefab(secondPrefab, footprint, placementOffset);
+    }
+
+    private void AddItemQuantity(GameObject prefab, int amount)
+    {
+        if (prefab == null || amount <= 0)
+        {
+            return;
+        }
+
+        var existing = FindItemByPrefab(prefab);
+        if (existing != null)
+        {
+            existing.Quantity += amount;
+            return;
+        }
+
+        var storeItem = FindStoreItemByPrefab(prefab);
+        var item = new InventoryItem
+        {
+            Name = storeItem != null ? storeItem.Name : prefab.name,
+            Icon = storeItem != null ? storeItem.Icon : null,
+            Prefab = prefab,
+            Footprint = storeItem != null ? storeItem.Footprint : Vector2Int.one,
+            PlacementOffset = storeItem != null ? storeItem.PlacementOffset : Vector3.zero,
+            Cost = storeItem != null ? storeItem.Cost : 0,
+            Quantity = amount
+        };
+
+        Items.Add(item);
     }
 
     private InventoryItem FindItemByPrefab(GameObject prefab)
