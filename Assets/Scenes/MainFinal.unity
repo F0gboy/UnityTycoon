@@ -5602,81 +5602,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3560158367704648534, guid: 6f2d6d8548dbc9042a8d8e45da4332ff, type: 3}
   m_PrefabInstance: {fileID: 624087532}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &638544987
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 638544988}
-  - component: {fileID: 638544990}
-  - component: {fileID: 638544989}
-  m_Layer: 5
-  m_Name: Image
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &638544988
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638544987}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.3359, y: 1.3359, z: 1.3359}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1929402092}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -882.8, y: 326.7}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &638544989
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638544987}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: dda6e33dad92fbb428fa1d36ff40363d, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!222 &638544990
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638544987}
-  m_CullTransparentMesh: 1
 --- !u!1001 &703764904
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -14434,35 +14359,35 @@ MonoBehaviour:
   Items: []
   StoreItems:
   - Name: Basic Miner
-    Icon: {fileID: 21300000, guid: 97a8495b259ee9049a2eccd7d8be30dd, type: 3}
+    Icon: {fileID: 21300000, guid: 2d44cfd95d59c1e46ad7732190e4f445, type: 3}
     Prefab: {fileID: 5785298354766236308, guid: dc81d9595d6dc064495a3ff58682afaf, type: 3}
     Footprint: {x: 3, y: 3}
     PlacementOffset: {x: 0, y: 0, z: 0}
     Cost: 35
     Quantity: 1
   - Name: Basic Conveyor
-    Icon: {fileID: 0}
+    Icon: {fileID: 21300000, guid: 32d2c43f6f2bc10409d4f740c1d993e1, type: 3}
     Prefab: {fileID: 9061606983911019492, guid: fb96c456b8304094cb8cf4116cebf29f, type: 3}
     Footprint: {x: 5, y: 3}
     PlacementOffset: {x: 1, y: 0, z: 0}
     Cost: 15
     Quantity: 1
   - Name: Selling Pit
-    Icon: {fileID: 0}
+    Icon: {fileID: 21300000, guid: 2f27d6753abdae7478867bad34acee61, type: 3}
     Prefab: {fileID: 7306060856212608626, guid: e0972c6772ddff04b9c77d5453a3bbb0, type: 3}
     Footprint: {x: 3, y: 3}
     PlacementOffset: {x: 0, y: 0, z: 0}
     Cost: 100
     Quantity: 1
   - Name: Big Dropper
-    Icon: {fileID: 0}
+    Icon: {fileID: 21300000, guid: dda6e33dad92fbb428fa1d36ff40363d, type: 3}
     Prefab: {fileID: 5785298354766236308, guid: 24c88c4136078724dbb86534170b2312, type: 3}
     Footprint: {x: 3, y: 3}
     PlacementOffset: {x: 0, y: 0, z: 0}
     Cost: 300
     Quantity: 1
   - Name: Basic Upgrader
-    Icon: {fileID: 0}
+    Icon: {fileID: 21300000, guid: 95599bd823e3c874da2a9f6af519071c, type: 3}
     Prefab: {fileID: 4664020713463211675, guid: 6d12c90cbeba3854fb345ea35a9967db, type: 3}
     Footprint: {x: 1, y: 5}
     PlacementOffset: {x: 0, y: 0, z: 0}
@@ -14499,7 +14424,6 @@ RectTransform:
   - {fileID: 2095743649}
   - {fileID: 55270148}
   - {fileID: 1513571468}
-  - {fileID: 638544988}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: -0.004, y: 0.015, z: -0.054}
   m_AnchorMin: {x: 0, y: 0}

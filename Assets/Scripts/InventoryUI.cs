@@ -49,6 +49,7 @@ public class InventoryUI : MonoBehaviour
     private bool showingStore;
     private InventoryItemSlot selectedSlot;
     private int coins;
+    private readonly List<GameObject> spawnedSlots = new List<GameObject>();
 
     private void Awake()
     {
@@ -137,17 +138,18 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        var toDestroy = new List<GameObject>();
-        for (int i = ContentRoot.childCount - 1; i >= 0; i--)
+        for (int i = spawnedSlots.Count - 1; i >= 0; i--)
         {
-            var child = ContentRoot.GetChild(i);
-            child.SetParent(null, false);
-            toDestroy.Add(child.gameObject);
-        }
+            var existingSlot = spawnedSlots[i];
+            if (existingSlot == null)
+            {
+                spawnedSlots.RemoveAt(i);
+                continue;
+            }
 
-        for (int i = 0; i < toDestroy.Count; i++)
-        {
-            Destroy(toDestroy[i]);
+            existingSlot.transform.SetParent(null, false);
+            Destroy(existingSlot);
+            spawnedSlots.RemoveAt(i);
         }
 
         var source = showingStore ? StoreItems : Items;
@@ -159,6 +161,7 @@ public class InventoryUI : MonoBehaviour
             var item = source[i];
             var slot = Instantiate(prefabToUse, ContentRoot, false);
             slot.transform.localScale = Vector3.one;
+            spawnedSlots.Add(slot);
 
             ApplySlotIcon(slot, item.Icon);
 
