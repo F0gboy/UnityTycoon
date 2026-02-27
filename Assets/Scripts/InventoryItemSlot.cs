@@ -12,6 +12,7 @@ public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerEx
     public string ItemName;
     public Sprite Icon;
     public int Cost;
+    public InventoryUI.StoreCategory Category;
     public bool IsStoreItem;
     public Button BuyButton;
     public Button SelectButton;
@@ -110,7 +111,7 @@ public class InventoryItemSlot : MonoBehaviour, IPointerEnterHandler, IPointerEx
             return;
         }
 
-        Inventory.TryBuyItem(ItemName, Icon, Prefab, Footprint, PlacementOffset, Cost);
+        Inventory.TryBuyItem(ItemName, Icon, Prefab, Footprint, PlacementOffset, Cost, Category);
     }
 
     public void OnPointerEnter(PointerEventData eventData)

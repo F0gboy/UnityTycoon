@@ -26,19 +26,27 @@ public class InventoryUI : MonoBehaviour
     public bool KeepCursorUnlockedWhileVisible = true;
 
     [Header("Tabs")]
-    public Button InventoryTabButton;
-    public Button StoreTabButton;
+    public Button InventoryButton;
+    public Button MinersStoreButton;
+    public Button TransportationStoreButton;
+    public Button UpgradersStoreButton;
+    public Button SellersStoreButton;
 
     [Header("Slide Settings")]
     public float SlideDuration = 0.25f;
     public Vector2 VisibleAnchoredPosition = Vector2.zero;
     public Vector2 HiddenAnchoredPosition = new Vector2(-800f, 0f);
+    public bool StartHiddenOnAwake = false;
 
     [Header("Grid Layout")]
     public Vector2 Spacing = new Vector2(8f, 8f);
     public Vector4 PaddingLeftTopRightBottom = new Vector4(12f, 12f, 12f, 12f);
     public int FixedColumns = 2;
+    public float HorizontalStepRight = 0f;
     public Vector2 ItemStep = new Vector2(10f, 20f);
+    public int MaxVisibleSlots = 9;
+    public bool ForceTopLeftRuntimeAnchors = false;
+    public bool AutoResizeContentRoot = false;
 
 
     [Header("Placement Integration")]
@@ -47,6 +55,7 @@ public class InventoryUI : MonoBehaviour
     private bool isVisible;
     private Coroutine slideRoutine;
     private bool showingStore;
+    private StoreCategory activeStoreCategory = StoreCategory.Miners;
     private InventoryItemSlot selectedSlot;
     private int coins;
     private readonly List<GameObject> spawnedSlots = new List<GameObject>();
@@ -62,11 +71,18 @@ public class InventoryUI : MonoBehaviour
         UpdateCoinsText();
         HookGridEvents();
         Populate();
-        SetVisible(false, instant: true);
+        SetVisible(!StartHiddenOnAwake, instant: true);
     }
 
     private void OnDestroy()
     {
+        UnhookTabButtons();
+
+        if (GridSystem != null)
+        {
+            GridSystem.ItemPlacedWithInstance -= HandleItemPlacedWithInstance;
+        }
+
         if (Instance == this)
         {
             Instance = null;
@@ -155,11 +171,16 @@ public class InventoryUI : MonoBehaviour
             spawnedSlots.RemoveAt(i);
         }
 
-        var source = showingStore ? StoreItems : Items;
+        var source = showingStore
+            ? GetStoreItemsForActiveCategory()
+            : Items;
         var prefabToUse = showingStore && StoreItemSlotPrefab != null
             ? StoreItemSlotPrefab
             : ItemSlotPrefab;
-        for (int i = 0; i < source.Count; i++)
+        var maxSlots = Mathf.Max(0, MaxVisibleSlots);
+        var visibleCount = Mathf.Min(source.Count, maxSlots);
+
+        for (int i = 0; i < visibleCount; i++)
         {
             var item = source[i];
             var slot = Instantiate(prefabToUse, ContentRoot, false);
@@ -207,6 +228,7 @@ public class InventoryUI : MonoBehaviour
             slotClick.ItemName = item.Name;
             slotClick.Icon = item.Icon;
             slotClick.Cost = item.Cost;
+            slotClick.Category = item.Category;
             slotClick.ConfigureStore(showingStore);
             slotClick.SetSelected(slotClick == selectedSlot);
         }
@@ -247,14 +269,62 @@ public class InventoryUI : MonoBehaviour
 
     private void HookTabButtons()
     {
-        if (InventoryTabButton != null)
+        if (InventoryButton != null)
         {
-            InventoryTabButton.onClick.AddListener(ShowInventoryTab);
+            InventoryButton.onClick.RemoveListener(ShowInventoryTab);
+            InventoryButton.onClick.AddListener(ShowInventoryTab);
         }
 
-        if (StoreTabButton != null)
+        if (MinersStoreButton != null)
         {
-            StoreTabButton.onClick.AddListener(ShowStoreTab);
+            MinersStoreButton.onClick.RemoveListener(ShowMinersStoreTab);
+            MinersStoreButton.onClick.AddListener(ShowMinersStoreTab);
+        }
+
+        if (TransportationStoreButton != null)
+        {
+            TransportationStoreButton.onClick.RemoveListener(ShowTransportationStoreTab);
+            TransportationStoreButton.onClick.AddListener(ShowTransportationStoreTab);
+        }
+
+        if (UpgradersStoreButton != null)
+        {
+            UpgradersStoreButton.onClick.RemoveListener(ShowUpgradersStoreTab);
+            UpgradersStoreButton.onClick.AddListener(ShowUpgradersStoreTab);
+        }
+
+        if (SellersStoreButton != null)
+        {
+            SellersStoreButton.onClick.RemoveListener(ShowSellersStoreTab);
+            SellersStoreButton.onClick.AddListener(ShowSellersStoreTab);
+        }
+    }
+
+    private void UnhookTabButtons()
+    {
+        if (InventoryButton != null)
+        {
+            InventoryButton.onClick.RemoveListener(ShowInventoryTab);
+        }
+
+        if (MinersStoreButton != null)
+        {
+            MinersStoreButton.onClick.RemoveListener(ShowMinersStoreTab);
+        }
+
+        if (TransportationStoreButton != null)
+        {
+            TransportationStoreButton.onClick.RemoveListener(ShowTransportationStoreTab);
+        }
+
+        if (UpgradersStoreButton != null)
+        {
+            UpgradersStoreButton.onClick.RemoveListener(ShowUpgradersStoreTab);
+        }
+
+        if (SellersStoreButton != null)
+        {
+            SellersStoreButton.onClick.RemoveListener(ShowSellersStoreTab);
         }
     }
 
@@ -265,9 +335,30 @@ public class InventoryUI : MonoBehaviour
         Populate();
     }
 
-    public void ShowStoreTab()
+    public void ShowMinersStoreTab()
+    {
+        ShowStoreTab(StoreCategory.Miners);
+    }
+
+    public void ShowTransportationStoreTab()
+    {
+        ShowStoreTab(StoreCategory.Transportation);
+    }
+
+    public void ShowUpgradersStoreTab()
+    {
+        ShowStoreTab(StoreCategory.Upgraders);
+    }
+
+    public void ShowSellersStoreTab()
+    {
+        ShowStoreTab(StoreCategory.Sellers);
+    }
+
+    private void ShowStoreTab(StoreCategory category)
     {
         showingStore = true;
+        activeStoreCategory = category;
         SetSelectedSlot(null);
         if (GridSystem != null)
         {
@@ -276,7 +367,12 @@ public class InventoryUI : MonoBehaviour
         Populate();
     }
 
-    public bool TryBuyItem(string name, Sprite icon, GameObject prefab, Vector2Int footprint, Vector3 placementOffset, int cost)
+    public void ShowStoreTab()
+    {
+        ShowMinersStoreTab();
+    }
+
+    public bool TryBuyItem(string name, Sprite icon, GameObject prefab, Vector2Int footprint, Vector3 placementOffset, int cost, StoreCategory category)
     {
         if (cost < 0)
         {
@@ -292,7 +388,7 @@ public class InventoryUI : MonoBehaviour
         UpdateCoinsText();
 
         var quantityToAdd = IsTeleporterPrefab(prefab) ? 2 : 1;
-        AddOrIncrementItem(prefab, quantityToAdd, name, icon, footprint, placementOffset, cost);
+        AddOrIncrementItem(prefab, quantityToAdd, name, icon, footprint, placementOffset, cost, category);
 
         SetSelectedSlot(null);
         if (GridSystem != null)
@@ -368,7 +464,8 @@ public class InventoryUI : MonoBehaviour
             storeItem != null ? storeItem.Icon : null,
             footprint,
             placementOffset,
-            storeItem != null ? storeItem.Cost : 0);
+            storeItem != null ? storeItem.Cost : 0,
+            storeItem != null ? storeItem.Category : StoreCategory.Miners);
         Populate();
     }
 
@@ -392,9 +489,32 @@ public class InventoryUI : MonoBehaviour
             storeItem.Icon,
             storeItem.Footprint,
             storeItem.PlacementOffset,
-            storeItem.Cost);
+            storeItem.Cost,
+            storeItem.Category);
         Populate();
         return true;
+    }
+
+    private List<InventoryItem> GetStoreItemsForActiveCategory()
+    {
+        var filtered = new List<InventoryItem>();
+        for (int i = 0; i < StoreItems.Count; i++)
+        {
+            var item = StoreItems[i];
+            if (item == null)
+            {
+                continue;
+            }
+
+            if (item.Category != activeStoreCategory)
+            {
+                continue;
+            }
+
+            filtered.Add(item);
+        }
+
+        return filtered;
     }
 
     public bool TryResolveStorePrefabForPlaced(GameObject placedPrefab, out GameObject storePrefab)
@@ -498,6 +618,13 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
+        if (ForceTopLeftRuntimeAnchors)
+        {
+            ContentRoot.anchorMin = new Vector2(0f, 1f);
+            ContentRoot.anchorMax = new Vector2(0f, 1f);
+            ContentRoot.pivot = new Vector2(0f, 1f);
+        }
+
         var paddingLeft = PaddingLeftTopRightBottom.x;
         var paddingTop = PaddingLeftTopRightBottom.y;
         var paddingRight = PaddingLeftTopRightBottom.z;
@@ -509,10 +636,11 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        var columns = Mathf.Max(1, FixedColumns);
+        var itemWidth = firstRect.rect.width;
         var itemHeight = firstRect.rect.height;
-
-        var verticalSign = ContentRoot.lossyScale.y < 0 ? 1f : -1f;
+        var stepX = HorizontalStepRight > 0f
+            ? HorizontalStepRight
+            : (itemWidth + Spacing.x);
 
         for (int i = 0; i < ContentRoot.childCount; i++)
         {
@@ -522,22 +650,24 @@ public class InventoryUI : MonoBehaviour
                 continue;
             }
 
-            child.anchorMin = new Vector2(0f, 1f);
-            child.anchorMax = new Vector2(0f, 1f);
-            child.pivot = new Vector2(0f, 1f);
+            if (ForceTopLeftRuntimeAnchors)
+            {
+                child.anchorMin = new Vector2(0f, 1f);
+                child.anchorMax = new Vector2(0f, 1f);
+                child.pivot = new Vector2(0f, 1f);
+            }
 
-            var col = i % columns;
-            var row = i / columns;
-            var x = paddingLeft + col * ItemStep.x;
-            var y = paddingTop + row * ItemStep.y;
-            child.anchoredPosition = new Vector2(x, verticalSign * -y);
+            var x = paddingLeft + i * stepX;
+            child.anchoredPosition = new Vector2(x, -paddingTop);
         }
 
-        var rows = Mathf.CeilToInt(ContentRoot.childCount / (float)columns);
-        var totalHeight = paddingTop + paddingBottom + itemHeight + Mathf.Max(0, rows - 1) * ItemStep.y;
-        if (totalHeight > ContentRoot.rect.height)
+        var slotCountForWidth = Mathf.Max(ContentRoot.childCount, Mathf.Max(0, MaxVisibleSlots));
+        var totalWidth = paddingLeft + paddingRight + itemWidth + Mathf.Max(0, slotCountForWidth - 1) * stepX;
+        var totalHeight = paddingTop + paddingBottom + itemHeight;
+
+        if (AutoResizeContentRoot)
         {
-            ContentRoot.sizeDelta = new Vector2(ContentRoot.sizeDelta.x, totalHeight);
+            ContentRoot.sizeDelta = new Vector2(totalWidth, totalHeight);
         }
     }
 
@@ -968,7 +1098,8 @@ public class InventoryUI : MonoBehaviour
             storeItem != null ? storeItem.Icon : null,
             storeItem != null ? storeItem.Footprint : Vector2Int.one,
             storeItem != null ? storeItem.PlacementOffset : Vector3.zero,
-            storeItem != null ? storeItem.Cost : 0);
+            storeItem != null ? storeItem.Cost : 0,
+            storeItem != null ? storeItem.Category : StoreCategory.Miners);
     }
 
     private void AddOrIncrementItem(
@@ -978,7 +1109,8 @@ public class InventoryUI : MonoBehaviour
         Sprite icon,
         Vector2Int footprint,
         Vector3 placementOffset,
-        int cost)
+        int cost,
+        StoreCategory category)
     {
         if (prefab == null || amount <= 0)
         {
@@ -1000,6 +1132,7 @@ public class InventoryUI : MonoBehaviour
             Footprint = footprint,
             PlacementOffset = placementOffset,
             Cost = cost,
+            Category = category,
             Quantity = amount
         });
     }
@@ -1140,6 +1273,15 @@ public class InventoryUI : MonoBehaviour
     }
 
     [System.Serializable]
+    public enum StoreCategory
+    {
+        Miners,
+        Transportation,
+        Upgraders,
+        Sellers
+    }
+
+    [System.Serializable]
     public class InventoryItem
     {
         public string Name;
@@ -1148,6 +1290,7 @@ public class InventoryUI : MonoBehaviour
         public Vector2Int Footprint = Vector2Int.one;
         public Vector3 PlacementOffset = Vector3.zero;
         public int Cost;
+        public StoreCategory Category = StoreCategory.Miners;
         public int Quantity = 1;
     }
 }
