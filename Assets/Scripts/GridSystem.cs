@@ -153,10 +153,7 @@ public class GridSystem : MonoBehaviour
                     return;
                 }
 
-                if (hasPlacementSelection)
-                {
-                    TryPlaceAtCell(hoveredCell);
-                }
+                TryPlaceAtCell(hoveredCell);
             }
         }
         else
@@ -407,6 +404,7 @@ public class GridSystem : MonoBehaviour
             cell.x + cellOffset.x - centerAnchorOffset.x,
             0,
             cell.z + cellOffset.z - centerAnchorOffset.z);
+        placementCell += GetRotatedCellOffset(selectedOccupancyCellOffset);
 
         var ignoreOccupiedCells = ShouldIgnoreOccupiedCellsForPrefab(prefab);
 
@@ -547,88 +545,68 @@ public class GridSystem : MonoBehaviour
 
     public void SelectItem(int index)
     {
-        SelectedIndex = index;
-        selectedPrefabOverride = null;
-        selectedFootprint = Vector2Int.one;
-        selectedPlacementOffset = Vector3.zero;
-        selectedOccupancyCellOffset = Vector2Int.zero;
-        RefreshGhost();
+        ApplySelection(index, null, Vector2Int.one, Vector3.zero, Vector2Int.zero);
     }
 
     public void ClearSelection()
     {
-        SelectedIndex = -1;
-        selectedPrefabOverride = null;
-        selectedFootprint = Vector2Int.one;
-        selectedPlacementOffset = Vector3.zero;
-        selectedOccupancyCellOffset = Vector2Int.zero;
+        ApplySelection(-1, null, Vector2Int.one, Vector3.zero, Vector2Int.zero, refreshGhost: false);
         DestroyGhost();
     }
 
     public void SelectPrefab(GameObject prefab)
     {
-        selectedPrefabOverride = prefab;
-        selectedFootprint = Vector2Int.one;
-        selectedPlacementOffset = Vector3.zero;
-        selectedOccupancyCellOffset = Vector2Int.zero;
-        RefreshGhost();
+        ApplySelection(SelectedIndex, prefab, Vector2Int.one, Vector3.zero, Vector2Int.zero);
     }
 
     public void SelectItem(int index, Vector2Int footprint)
     {
-        SelectedIndex = index;
-        selectedPrefabOverride = null;
-        selectedFootprint = NormalizeFootprint(footprint);
-        selectedPlacementOffset = Vector3.zero;
-        selectedOccupancyCellOffset = Vector2Int.zero;
-        RefreshGhost();
+        ApplySelection(index, null, footprint, Vector3.zero, Vector2Int.zero);
     }
 
     public void SelectPrefab(GameObject prefab, Vector2Int footprint)
     {
-        selectedPrefabOverride = prefab;
-        selectedFootprint = NormalizeFootprint(footprint);
-        selectedPlacementOffset = Vector3.zero;
-        selectedOccupancyCellOffset = Vector2Int.zero;
-        RefreshGhost();
+        ApplySelection(SelectedIndex, prefab, footprint, Vector3.zero, Vector2Int.zero);
     }
 
     public void SelectItem(int index, Vector2Int footprint, Vector3 placementOffset)
     {
-        SelectedIndex = index;
-        selectedPrefabOverride = null;
-        selectedFootprint = NormalizeFootprint(footprint);
-        selectedPlacementOffset = placementOffset;
-        selectedOccupancyCellOffset = Vector2Int.zero;
-        RefreshGhost();
+        ApplySelection(index, null, footprint, placementOffset, Vector2Int.zero);
     }
 
     public void SelectPrefab(GameObject prefab, Vector2Int footprint, Vector3 placementOffset)
     {
-        selectedPrefabOverride = prefab;
-        selectedFootprint = NormalizeFootprint(footprint);
-        selectedPlacementOffset = placementOffset;
-        selectedOccupancyCellOffset = Vector2Int.zero;
-        RefreshGhost();
+        ApplySelection(SelectedIndex, prefab, footprint, placementOffset, Vector2Int.zero);
     }
 
     public void SelectItem(int index, Vector2Int footprint, Vector3 placementOffset, Vector2Int occupancyCellOffset)
     {
-        SelectedIndex = index;
-        selectedPrefabOverride = null;
-        selectedFootprint = NormalizeFootprint(footprint);
-        selectedPlacementOffset = placementOffset;
-        selectedOccupancyCellOffset = occupancyCellOffset;
-        RefreshGhost();
+        ApplySelection(index, null, footprint, placementOffset, occupancyCellOffset);
     }
 
     public void SelectPrefab(GameObject prefab, Vector2Int footprint, Vector3 placementOffset, Vector2Int occupancyCellOffset)
     {
-        selectedPrefabOverride = prefab;
+        ApplySelection(SelectedIndex, prefab, footprint, placementOffset, occupancyCellOffset);
+    }
+
+    private void ApplySelection(
+        int selectedIndex,
+        GameObject prefabOverride,
+        Vector2Int footprint,
+        Vector3 placementOffset,
+        Vector2Int occupancyCellOffset,
+        bool refreshGhost = true)
+    {
+        SelectedIndex = selectedIndex;
+        selectedPrefabOverride = prefabOverride;
         selectedFootprint = NormalizeFootprint(footprint);
         selectedPlacementOffset = placementOffset;
         selectedOccupancyCellOffset = occupancyCellOffset;
-        RefreshGhost();
+
+        if (refreshGhost)
+        {
+            RefreshGhost();
+        }
     }
 
     private GameObject GetSelectedPrefab()
@@ -979,7 +957,6 @@ public class GridSystem : MonoBehaviour
             cell.x + cellOffset.x - centerAnchorOffset.x,
             0,
             cell.z + cellOffset.z - centerAnchorOffset.z);
-        placementCell += GetRotatedCellOffset(selectedOccupancyCellOffset);
         placementCell += GetRotatedCellOffset(selectedOccupancyCellOffset);
 
         var footprintVisualOffset = GetFootprintVisualOffset(effectiveFootprint);

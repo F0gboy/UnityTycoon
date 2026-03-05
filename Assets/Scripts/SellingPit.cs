@@ -87,7 +87,7 @@ public class SellingPit : MonoBehaviour
         {
             if (TryGetTypeSellValue(sellValue.TypeId, out int typeCoins))
             {
-                return Mathf.Max(0, Mathf.Max(typeCoins, sellValue.Coins));
+                return Mathf.Max(0, typeCoins, sellValue.Coins);
             }
 
             return Mathf.Max(0, sellValue.Coins);
@@ -125,16 +125,7 @@ public class SellingPit : MonoBehaviour
 
     private bool IsAffected(Collider other)
     {
-        if ((AffectedLayers.value & (1 << other.gameObject.layer)) == 0)
-        {
-            return false;
-        }
-
-        if (!string.IsNullOrEmpty(RequiredTag) && !other.CompareTag(RequiredTag))
-        {
-            return false;
-        }
-
-        return true;
+        return (AffectedLayers.value & (1 << other.gameObject.layer)) != 0
+            && (string.IsNullOrEmpty(RequiredTag) || other.CompareTag(RequiredTag));
     }
 }

@@ -18,11 +18,13 @@ public class Dropper : MonoBehaviour
             return;
         }
 
-        if (Time.time >= nextDropTime)
+        if (Time.time < nextDropTime)
         {
-            SpawnDrop();
-            nextDropTime = Time.time + DropInterval;
+            return;
         }
+
+        SpawnDrop();
+        nextDropTime = Time.time + DropInterval;
     }
 
     private void SpawnDrop()

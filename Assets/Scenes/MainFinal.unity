@@ -1034,14 +1034,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 96141425}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.67222065, z: -0, w: 0.74035084}
+  m_LocalRotation: {x: -0, y: -0.6802565, z: -0, w: 0.73297423}
   m_LocalPosition: {x: 0.011416434, y: 1, z: 0.010362626}
   m_LocalScale: {x: 1, y: 2.157, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1433343217}
   m_Father: {fileID: 1254513432}
-  m_LocalEulerAnglesHint: {x: 0, y: -84.477, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -85.727, z: 0}
 --- !u!23 &96141427
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -2593,7 +2593,7 @@ Transform:
   m_GameObject: {fileID: 296436505}
   serializedVersion: 2
   m_LocalRotation: {x: -0.04684253, y: -0.0011328233, z: -0.000052068157, w: 0.99890167}
-  m_LocalPosition: {x: 23.74, y: 8.44, z: 55.01}
+  m_LocalPosition: {x: 15.33, y: 6.26, z: 60.94}
   m_LocalScale: {x: 1, y: 1.8583, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2884,7 +2884,7 @@ Transform:
   m_GameObject: {fileID: 334715651}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.70710677}
-  m_LocalPosition: {x: 23.780012, y: 2.79, z: 59.05}
+  m_LocalPosition: {x: 15.370012, y: 0.93, z: 64.770004}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -15347,14 +15347,14 @@ MonoBehaviour:
     Category: 2
     Quantity: 1
   - Name: Teleporter
-    Icon: {fileID: 21300000, guid: 32d2c43f6f2bc10409d4f740c1d993e1, type: 3}
+    Icon: {fileID: 21300000, guid: 7429b5a7d4aed174391cbc49f9a4f37e, type: 3}
     Prefab: {fileID: 2539157315223561284, guid: 1c7318995074d7642886fc0852ba52e6, type: 3}
     Footprint: {x: 3, y: 3}
     PlacementOffset: {x: 0, y: 0, z: 0}
     Cost: 100
     Category: 1
     Quantity: 1
-  StartingCoins: 250
+  StartingCoins: 1000
   CoinsTextTMP: {fileID: 55270146}
   ToggleKey: 102
   KeepCursorUnlockedWhileVisible: 1

@@ -242,7 +242,7 @@ public class ValueUpgrader : MonoBehaviour
 
         var start = probePosition + Vector3.up * 3f;
         var hits = Physics.RaycastAll(start, Vector3.down, 8f);
-        if (hits == null || hits.Length == 0)
+        if (hits.Length == 0)
         {
             return false;
         }
@@ -281,29 +281,34 @@ public class ValueUpgrader : MonoBehaviour
             return null;
         }
 
+        // First prefer the conveyor in this exact parent chain.
         var direct = source.GetComponentInParent<ConveyorBelt>();
-        if (direct != null && direct.UpgraderSnapPoint != null)
+        if (direct != null)
         {
             return direct;
         }
 
-        var root = source.root;
-        if (root == null)
+        // Fallback: only search this transform's own branch, not the whole scene root.
+        var inBranch = source.GetComponentsInChildren<ConveyorBelt>(true);
+        if (inBranch == null || inBranch.Length == 0)
         {
-            return direct;
+            return null;
         }
 
-        var conveyors = root.GetComponentsInChildren<ConveyorBelt>(true);
-        ConveyorBelt fallback = direct;
-        for (int i = 0; i < conveyors.Length; i++)
+        ConveyorBelt nearest = null;
+        var nearestSqr = float.MaxValue;
+        for (int i = 0; i < inBranch.Length; i++)
         {
-            if (conveyors[i].UpgraderSnapPoint != null)
+            var conveyor = inBranch[i];
+            var sqr = (conveyor.transform.position - source.position).sqrMagnitude;
+            if (sqr < nearestSqr)
             {
-                return conveyors[i];
+                nearestSqr = sqr;
+                nearest = conveyor;
             }
         }
 
-        return fallback;
+        return nearest;
     }
 
     private GameObject ResolveTarget(Collider other)
@@ -318,17 +323,8 @@ public class ValueUpgrader : MonoBehaviour
 
     private bool IsAffected(Collider other)
     {
-        if ((AffectedLayers.value & (1 << other.gameObject.layer)) == 0)
-        {
-            return false;
-        }
-
-        if (!string.IsNullOrEmpty(RequiredTag) && !other.CompareTag(RequiredTag))
-        {
-            return false;
-        }
-
-        return true;
+        return (AffectedLayers.value & (1 << other.gameObject.layer)) != 0
+            && (string.IsNullOrEmpty(RequiredTag) || other.CompareTag(RequiredTag));
     }
 }
 

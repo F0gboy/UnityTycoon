@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -117,7 +117,7 @@ public class PlacedObjectInteractionController : MonoBehaviour
             return;
         }
 
-        var cam = InteractionCamera != null ? InteractionCamera : Camera.main;
+        var cam = GetInteractionCamera();
         if (cam == null)
         {
             return;
@@ -132,7 +132,7 @@ public class PlacedObjectInteractionController : MonoBehaviour
 
     private void TrySelectPlacedObject()
     {
-        var cam = InteractionCamera != null ? InteractionCamera : Camera.main;
+        var cam = GetInteractionCamera();
         if (cam == null)
         {
             return;
@@ -140,7 +140,7 @@ public class PlacedObjectInteractionController : MonoBehaviour
 
         var ray = cam.ScreenPointToRay(Input.mousePosition);
         var hits = Physics.RaycastAll(ray, 600f, SelectionMask);
-        if (hits == null || hits.Length == 0)
+        if (hits.Length == 0)
         {
             ClearSelection();
             return;
@@ -204,7 +204,7 @@ public class PlacedObjectInteractionController : MonoBehaviour
         for (int i = 0; i < canvases.Length; i++)
         {
             canvases[i].renderMode = RenderMode.WorldSpace;
-            canvases[i].worldCamera = InteractionCamera != null ? InteractionCamera : Camera.main;
+            canvases[i].worldCamera = GetInteractionCamera();
 
             if (canvases[i].GetComponent<GraphicRaycaster>() == null)
             {
@@ -267,7 +267,7 @@ public class PlacedObjectInteractionController : MonoBehaviour
         }
 
         var modules = eventSystemObject.GetComponents<BaseInputModule>();
-        if (modules != null && modules.Length > 0)
+        if (modules.Length > 0)
         {
             return;
         }
@@ -284,7 +284,7 @@ public class PlacedObjectInteractionController : MonoBehaviour
 
     private void EnsureCameraHasPhysicsRaycaster()
     {
-        var cam = InteractionCamera != null ? InteractionCamera : Camera.main;
+        var cam = GetInteractionCamera();
         if (cam == null)
         {
             return;
@@ -558,7 +558,7 @@ public class PlacedObjectInteractionController : MonoBehaviour
     private Vector3 GetPanelSpawnPosition()
     {
         var basePosition = selectedData.transform.position + PanelOffset;
-        var cam = InteractionCamera != null ? InteractionCamera : Camera.main;
+        var cam = GetInteractionCamera();
         if (cam == null || DistanceTowardsPlayer <= 0f)
         {
             return basePosition;
@@ -719,7 +719,7 @@ public class PlacedObjectInteractionController : MonoBehaviour
         }
 
         var panelCanvas = panelRect.GetComponentInParent<Canvas>();
-        var uiCamera = panelCanvas != null ? panelCanvas.worldCamera : (InteractionCamera != null ? InteractionCamera : Camera.main);
+        var uiCamera = ResolveUICamera(panelCanvas);
         if (!RectTransformUtility.RectangleContainsScreenPoint(panelRect, Input.mousePosition, uiCamera))
         {
             return false;
@@ -758,7 +758,7 @@ public class PlacedObjectInteractionController : MonoBehaviour
         }
 
         var panelCanvas = panelRect.GetComponentInParent<Canvas>();
-        var uiCamera = panelCanvas != null ? panelCanvas.worldCamera : (InteractionCamera != null ? InteractionCamera : Camera.main);
+        var uiCamera = ResolveUICamera(panelCanvas);
         return RectTransformUtility.RectangleContainsScreenPoint(panelRect, Input.mousePosition, uiCamera);
     }
 
@@ -792,7 +792,22 @@ public class PlacedObjectInteractionController : MonoBehaviour
         }
 
         var panelCanvas = button.GetComponentInParent<Canvas>();
-        var uiCamera = panelCanvas != null ? panelCanvas.worldCamera : (InteractionCamera != null ? InteractionCamera : Camera.main);
+        var uiCamera = ResolveUICamera(panelCanvas);
         return RectTransformUtility.RectangleContainsScreenPoint(rect, Input.mousePosition, uiCamera);
+    }
+
+    private Camera GetInteractionCamera()
+    {
+        return InteractionCamera != null ? InteractionCamera : Camera.main;
+    }
+
+    private Camera ResolveUICamera(Canvas panelCanvas)
+    {
+        if (panelCanvas != null && panelCanvas.worldCamera != null)
+        {
+            return panelCanvas.worldCamera;
+        }
+
+        return GetInteractionCamera();
     }
 }

@@ -8,8 +8,6 @@ public class ConveyorBelt : MonoBehaviour
     public Vector3 Direction = Vector3.forward;
     public bool UseLocalDirection = true;
     public bool OverrideHorizontalVelocity = true;
-    public float HorizontalAcceleration = 25f;
-    public float ExitImpulse = 0.75f;
 
     [Header("Collider")]
     public bool UseTrigger = false;
@@ -18,9 +16,10 @@ public class ConveyorBelt : MonoBehaviour
     public LayerMask AffectedLayers = ~0;
     public string RequiredTag = "";
 
-    [Header("Upgrader Snap")]
+    [Header("Upgrader Slot")]
     public Transform UpgraderSnapPoint;
-    public float UpgraderSlotCheckRadius = 0.2f;
+    public bool LimitToSingleUpgrader = true;
+    public float UpgraderSlotRadius = 0.3f;
 
     private Collider beltTrigger;
 
@@ -64,37 +63,6 @@ public class ConveyorBelt : MonoBehaviour
         MoveTarget(other, collision.rigidbody);
     }
 
-    private void OnTriggerExit(Collider other)
-    {
-        if (!UseTrigger)
-        {
-            return;
-        }
-
-        if (!IsAffected(other))
-        {
-            return;
-        }
-
-        ApplyExitImpulse(other.attachedRigidbody);
-    }
-
-    private void OnCollisionExit(Collision collision)
-    {
-        if (UseTrigger)
-        {
-            return;
-        }
-
-        var other = collision.collider;
-        if (!IsAffected(other))
-        {
-            return;
-        }
-
-        ApplyExitImpulse(collision.rigidbody);
-    }
-
     private void MoveTarget(Collider other, Rigidbody rb)
     {
         var beltVelocity = GetBeltVelocity();
@@ -103,10 +71,7 @@ public class ConveyorBelt : MonoBehaviour
             if (OverrideHorizontalVelocity)
             {
                 var v = rb.linearVelocity;
-                var current = new Vector3(v.x, 0f, v.z);
-                var target = new Vector3(beltVelocity.x, 0f, beltVelocity.z);
-                var next = Vector3.MoveTowards(current, target, HorizontalAcceleration * Time.fixedDeltaTime);
-                rb.linearVelocity = new Vector3(next.x, v.y, next.z);
+                rb.linearVelocity = new Vector3(beltVelocity.x, v.y, beltVelocity.z);
             }
             else
             {
@@ -115,29 +80,8 @@ public class ConveyorBelt : MonoBehaviour
             return;
         }
 
-        var nextPos = other.transform.position + beltVelocity * Time.fixedDeltaTime;
-        other.transform.position = nextPos;
-    }
-
-    private void ApplyExitImpulse(Rigidbody rb)
-    {
-        if (rb == null || rb.isKinematic)
-        {
-            return;
-        }
-
-        if (ExitImpulse <= 0f)
-        {
-            return;
-        }
-
-        var dir = GetBeltVelocity();
-        if (dir.sqrMagnitude < 0.001f)
-        {
-            return;
-        }
-
-        rb.AddForce(dir.normalized * ExitImpulse, ForceMode.VelocityChange);
+        var target = other.transform.position + beltVelocity * Time.fixedDeltaTime;
+        other.transform.position = target;
     }
 
     private Vector3 GetBeltVelocity()
@@ -152,39 +96,23 @@ public class ConveyorBelt : MonoBehaviour
 
     private bool IsAffected(Collider other)
     {
-        if ((AffectedLayers.value & (1 << other.gameObject.layer)) == 0)
-        {
-            return false;
-        }
-
-        if (!string.IsNullOrEmpty(RequiredTag) && !other.CompareTag(RequiredTag))
-        {
-            return false;
-        }
-
-        return true;
+        return (AffectedLayers.value & (1 << other.gameObject.layer)) != 0
+            && (string.IsNullOrEmpty(RequiredTag) || other.CompareTag(RequiredTag));
     }
 
-    public bool IsUpgraderSlotFilled(ValueUpgrader requester = null)
+    public bool IsUpgraderSlotFilled(ValueUpgrader currentUpgrader = null)
     {
-        if (UpgraderSnapPoint == null)
+        if (!LimitToSingleUpgrader || UpgraderSnapPoint == null)
         {
             return false;
         }
 
-        var hits = Physics.OverlapSphere(
-            UpgraderSnapPoint.position,
-            Mathf.Max(0.01f, UpgraderSlotCheckRadius));
-
+        var radius = Mathf.Max(0.01f, UpgraderSlotRadius);
+        var hits = Physics.OverlapSphere(UpgraderSnapPoint.position, radius);
         for (int i = 0; i < hits.Length; i++)
         {
             var upgrader = hits[i].GetComponentInParent<ValueUpgrader>();
-            if (upgrader == null)
-            {
-                continue;
-            }
-
-            if (requester != null && upgrader == requester)
+            if (upgrader == null || upgrader == currentUpgrader)
             {
                 continue;
             }

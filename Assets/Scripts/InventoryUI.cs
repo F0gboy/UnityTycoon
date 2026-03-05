@@ -374,10 +374,7 @@ public class InventoryUI : MonoBehaviour
 
     public bool TryBuyItem(string name, Sprite icon, GameObject prefab, Vector2Int footprint, Vector3 placementOffset, int cost, StoreCategory category)
     {
-        if (cost < 0)
-        {
-            cost = 0;
-        }
+        cost = Mathf.Max(0, cost);
 
         if (coins < cost)
         {
@@ -1171,9 +1168,11 @@ public class InventoryUI : MonoBehaviour
                 return texts[i];
             }
         }
+
+        var objectNameLower = objectName.ToLowerInvariant();
         for (int i = 0; i < texts.Length; i++)
         {
-            if (texts[i].name.ToLowerInvariant().Contains(objectName.ToLowerInvariant()))
+            if (texts[i].name.ToLowerInvariant().Contains(objectNameLower))
             {
                 return texts[i];
             }
