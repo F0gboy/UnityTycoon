@@ -1,0 +1,14 @@
+{
+    "asset": "5e43135090e97e24cb74692e15f1265a",
+    "fileName": "019db48f-4d19-7484-9beb-4981936444e0.wav",
+    "prompt": "classic arcade coin gain sound effect, sparkle, chime, high pitch, positive feedback",
+    "negativePrompt": "",
+    "model": "5de0686a-fb27-40e5-9df0-28ae810d70ca",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "3a59b63b7af154192576355597cbe74d",
+    "feedback": 0,
+    "duration": 2.0,
+    "autoTrim": false,
+    "hasReference": false
+}

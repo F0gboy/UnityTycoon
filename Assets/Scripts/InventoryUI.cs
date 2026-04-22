@@ -52,8 +52,12 @@ public class InventoryUI : MonoBehaviour
     [Header("Placement Integration")]
     public GridSystem GridSystem;
 
+    [Header("Audio")]
+    public AudioSource AudioSource;
+    public AudioClip CoinGainSound;
+
     private bool isVisible;
-    private Coroutine slideRoutine;
+private Coroutine slideRoutine;
     private bool showingStore;
     private StoreCategory activeStoreCategory = StoreCategory.Miners;
     private InventoryItemSlot selectedSlot;
@@ -413,6 +417,11 @@ public class InventoryUI : MonoBehaviour
 
         coins += amount;
         UpdateCoinsText();
+
+        if (AudioSource != null && CoinGainSound != null)
+        {
+            AudioSource.PlayOneShot(CoinGainSound);
+        }
     }
 
     public bool TryGetCostForPrefab(GameObject prefab, out int cost)
